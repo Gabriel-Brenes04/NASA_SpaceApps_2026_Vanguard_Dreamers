@@ -10,7 +10,7 @@ import traceback
 
 
 def _main():
-    from base_lunar.juego import main
+    from base.base_lunar.juego import main
     main()
 
 

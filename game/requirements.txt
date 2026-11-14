@@ -1,0 +1,4 @@
+pygame-ce>=2.5
+numpy>=1.26
+python-dotenv
+requests

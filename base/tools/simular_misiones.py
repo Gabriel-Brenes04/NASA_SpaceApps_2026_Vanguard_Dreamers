@@ -20,7 +20,7 @@ import sys
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from base_lunar.simulador import Mision  # noqa: E402
+from base.base_lunar.simulador import Mision  # noqa: E402
 
 
 def tarea_experta(m):

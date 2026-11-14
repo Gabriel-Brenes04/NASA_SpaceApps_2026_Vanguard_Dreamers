@@ -19,8 +19,8 @@ sys.path.insert(0, RAIZ)
 sys.path.insert(0, os.path.join(RAIZ, "tools"))
 
 import pygame  # noqa: E402
-from base_lunar.juego import Juego  # noqa: E402
-import simular_misiones as SM  # noqa: E402
+from base.base_lunar.juego import Juego  # noqa: E402
+import base.tools.simular_misiones as SM  # noqa: E402
 
 
 def guardar(j, carpeta, nombre, hechas):

@@ -17,9 +17,9 @@ sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
 
-from base_lunar import simulador as S  # noqa: E402
-from base_lunar.microjuegos import Microjuego  # noqa: E402
-from base_lunar.texto_mate import fuente  # noqa: E402
+from base.base_lunar import simulador as S  # noqa: E402
+from base.base_lunar.microjuegos import Microjuego  # noqa: E402
+from base.base_lunar.texto_mate import fuente  # noqa: E402
 
 
 def cargar(nombre):

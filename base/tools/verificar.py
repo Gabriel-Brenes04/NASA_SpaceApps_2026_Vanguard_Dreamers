@@ -19,6 +19,8 @@ import random
 import re
 import sys
 
+from base.base_lunar import datos_nasa, decisiones, juego, simulador, texto_mate, textos
+
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +45,7 @@ def main():
     pygame.display.set_mode((1, 1))
 
     print("1. Paquete")
-    from base_lunar import datos_nasa, decisiones, juego, microjuegos, simulador, textos, texto_mate  # noqa: F401
+    from base.base_lunar import microjuegos  # noqa: F401
     ok("base_lunar importa completo")
 
     print("2. Datos de la NASA")
@@ -120,7 +122,7 @@ def main():
         print(f"  · todavía sin microjuego (se hacen automáticas): {', '.join(faltan)}")
 
     print("5. Misiones completas y balance")
-    import simular_misiones as SM
+    import base.tools.simular_misiones as SM
     rng = random.Random(9)
     for modo in ("completa", "corta"):
         for tipo, minimo, maximo in (("experto", 95, 100), ("descuidado", 0, 15)):

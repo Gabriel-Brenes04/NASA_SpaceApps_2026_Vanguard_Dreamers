@@ -12,9 +12,9 @@ import sys
 
 import pygame
 
-from . import datos_nasa as N
+from . import datos_nasa as N, sonido, textos
 from . import simulador as S
-from . import microjuegos, sonido, textos
+from . import microjuegos
 from .textos import t, n
 from .texto_mate import componer, fuente, fuente_pixel, pixel
 
