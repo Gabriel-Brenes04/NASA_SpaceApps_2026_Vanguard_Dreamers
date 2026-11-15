@@ -741,7 +741,7 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin, MapaMixin):
                    lambda: setattr(self, "jugar_micro", not self.jugar_micro),
                    "verde" if self.jugar_micro else "panel2", tam=18)
         colores = {"cosecha": "verde", "oxigeno": "cian", "radiacion": "naranja", "hielo": "azul",
-                   "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo"}
+                "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo", "veggie": "verde"}
         for i, (tid, ok, motivo) in enumerate(estado):
             fila, col = divmod(i, 3)
             r = pygame.Rect(p.x + 40 + col * 312, p.y + 126 + fila * 170, 296, 130)

@@ -15,7 +15,7 @@ Los datos reales (los recursos del reto: DONKI, RadLab/OSDR, APOD y la CSA) vive
 y `clima.py`. Los números de abajo son «parámetros del juego»: decisiones de diseño (tamaño de la
 batería, potencia de cada aparato, cuánto gasta una persona...). No se presentan como datos del reto.
 
-Las 7 tareas del día, siempre visibles: cosecha, oxigeno, radiacion, hielo, recreo, estiba, paneles.
+Las 8 tareas del día, siempre visibles: cosecha, oxigeno, radiacion, hielo, recreo, estiba, paneles, veggie.
 """
 import random
 
@@ -178,8 +178,8 @@ class Estado:
 
 
 # ══ Tareas del día (cada una puede ser un minijuego; `r` = rendimiento 0,4 a 1,3) ════════════
-# Siempre se muestran las 7. Las que hoy no se pueden hacer salen apagadas, con el motivo.
-TAREAS = ("cosecha", "oxigeno", "radiacion", "hielo", "recreo", "estiba", "paneles")
+# Siempre se muestran las 8. Las que hoy no se pueden hacer salen apagadas, con el motivo.
+TAREAS = ("cosecha", "oxigeno", "radiacion", "hielo", "recreo", "estiba", "paneles", "veggie")
 
 
 def tarea_titulo(tid):
@@ -191,6 +191,7 @@ def tarea_titulo(tid):
         "recreo": t("tarea.recreo", "Recreo de la tripulación"),
         "estiba": t("tarea.estiba", "Estiba del cohete de carga"),
         "paneles": t("tarea.paneles", "Alinear los paneles solares"),
+        "veggie": t("tarea.veggie", "Huerto Veggie"),
     }[tid]
 
 
@@ -203,6 +204,7 @@ def tarea_detalle(tid):
         "recreo": t("tarea.recreo.d", "+12 de ánimo"),
         "estiba": t("tarea.estiba.d", "+15 % de la carga que llegó hoy"),
         "paneles": t("tarea.paneles.d", "+60 kWh de energía · solo de día"),
+        "veggie": t("tarea.veggie.d", "+3 kg de comida y +5 de ánimo · necesita el invernadero encendido"),
     }[tid]
 
 
@@ -258,14 +260,14 @@ class Mision:
 
     # ── ③ tarea ──────────────────────────────────────────────────────────────────────
     def tareas_estado(self):
-        """Las 7 tareas, siempre: [(id, se_puede, motivo_si_no)]."""
+        """Las 8 tareas, siempre: [(id, se_puede, motivo_si_no)]."""
         e = self.e
         res = []
         for tid in TAREAS:
             motivo = ""
             if e.sin_tarea:
                 motivo = t("nod.rep", "hoy la tripulación está en una reparación")
-            elif tid == "cosecha" and not e.sistemas["invernadero"]:
+            elif tid in ("cosecha", "veggie") and not e.sistemas["invernadero"]:
                 motivo = t("nod.inv", "el invernadero está apagado")
             elif tid == "estiba" and not e.carga_hoy:
                 motivo = t("nod.carga", "hoy no llegó ningún cohete de carga")
@@ -289,6 +291,11 @@ class Mision:
             e.comida += 5 * r
             e.animo = min(100, e.animo + 2)
             return [t("tar.cosecha", "Cosecharon {kg} kg de comida.", kg=n(5 * r))]
+        if tid == "veggie":                 # parámetro del juego: menos comida que la cosecha, pero sube el ánimo
+            e.comida += 3 * r
+            e.animo = min(100, e.animo + 5 * r)
+            return [t("tar.veggie", "Cosecharon {kg} kg de verduras frescas del huerto Veggie y el ánimo subió.",
+                      kg=n(3 * r))]
         if tid == "oxigeno":
             o2 = 4 * r
             agua = o2 * N.AGUA_POR_KG_O2

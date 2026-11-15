@@ -18,7 +18,7 @@ energy, food, radiation dose and crew morale**. Every day brings a decision, and
   one lasts 14 days: the last 7 of sunlight and the first 7 of night.
 - **19 different decisions.** Their numbers come from the state of the base at that moment.
 - **Explained afterwards.** After each decision the game shows the math, so the player sees why the best  option is the best.
-- **Seven daily tasks**: harvest, oxygen leaks, radiation sweep, ice drilling, crew break, cargo stowing and solar panels.
+- **Eight daily tasks**: harvest, oxygen leaks, radiation sweep, ice drilling, crew break, cargo stowing and solar panels.
 - **English and Spanish.** Switch the language on the title screen.
 - **Challenge resources.** DONKI (space weather), RadLab/OSDR (dose units), APOD (menu backgrounds) and CSA pages (food, exercise). Round **?** buttons open fun facts in the menu, the central panel and under each task.
 - **Real space weather from NASA DONKI.** Every solar storm in the game is inspired on a real flare recorded by NASA.
@@ -57,7 +57,7 @@ Niños de 7 a 12 años administran una base en la Luna con 4 tripulantes durante
 
 1. **Mañana:** mirar los 6 indicadores y el reporte. Los sistemas se encienden y apagan con un clic.
 2. **Decisión:** un problema de decisión y manejo de recursos.
-3. **Tarea:** las 7 tareas: cosecha, fugas de oxígeno, barrido de radiación, perforar hielo, recreo (fotos a la Tierra), estiba de la carga y paneles solares. Cada una es un microjuego. 
+3. **Tarea:** las 8 tareas: cosecha, fugas de oxígeno, barrido de radiación, perforar hielo, recreo (fotos a la Tierra), estiba de la carga y paneles solares. Cada una es un microjuego. 
 4. **Cierre:** la base consume y produce; se ve qué subió y qué bajó.
 
 Se pierde si se acaba el oxígeno, el agua o la comida, si la radiación pasa el límite de la misión (250 mSv) o si el ánimo llega a cero.
