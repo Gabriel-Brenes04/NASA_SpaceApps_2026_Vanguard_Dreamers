@@ -17,7 +17,7 @@ REGISTRO = {}       # tarea -> clase
 ERRORES = {}        # módulo -> error (un microjuego roto no tumba el juego)
 
 # Si el .exe no deja listar la carpeta, se usan estos nombres (agregar aquí los nuevos también).
-CONOCIDOS = ["recreo", "huerto", "paneles", "escudo", "oxigeno", "hielo", "estiba", "radiacion"]
+CONOCIDOS = ["recreo", "paneles", "escudo", "oxigeno", "hielo", "estiba", "radiacion"] #falta huerto
 
 
 def _cargar(nombre):

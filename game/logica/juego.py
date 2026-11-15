@@ -478,13 +478,18 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
 
         # ══ POSICIONES: 
         ARR_X, ARR_Y = 0, 0          # barra de arriba: cuánto se corre (0, 0 = donde estaba)
-        BUT_X, BUT_Y = 30, 120       # buttom
+        ARR_H = 110                  # barra de arriba
+        LB_X, LB_Y = 18, 62          # botón de la izquierda: posición
+        LB_W, LB_H = 200, 38         # botón de la izquierda: ancho y alto
+        MAP_X, MAP_Y = 330, 50       # mapa de días (las bolitas): X del primer nodo, altura
+        MAP_W = 680 
+        BUT_X, BUT_Y = 30, 140       # buttom
         BUT_W, BUT_H = 520, 60
-        IND_X, IND_Y = 920, 120       # indicadores: posición
+        IND_X, IND_Y = 920, 140       # indicadores: posición
         IND_KX, IND_KY = 0.8, 0.78    # indicadores: tamaño en X (ancho) y en Y (alto). 1.0 = como antes
-        CEN_X, CEN_Y = 30, 200       # panel central (la base + sistemas + botón): posición
+        CEN_X, CEN_Y = 30, 220       # panel central (la base + sistemas + botón): posición
         CEN_KX, CEN_KY = 1.96, 0.94    # panel central: tamaño en X (ancho) y en Y (alto)
-        REP_X, REP_Y = 920, 530      # reporte de hoy: posición
+        REP_X, REP_Y = 920, 550      # reporte de hoy: posición
         REP_KX, REP_KY = 0.95, 0.30   # reporte: tamaño en X (ancho) y en Y (alto)
         # (las letras usan el más chico de los dos, para que no se deformen)
         # ═════════════════════════════════════════════════════════════════════════════════
@@ -495,11 +500,11 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
         r_x, r_y, r_f = esc(REP_KX, REP_KY)
 
         # barra de arriba con el mapa de los días de la misión (una constelación de nodos)
-        self.caja((ARR_X, -14 + ARR_Y, W, 70), "panel", radio=0)
+        self.caja((ARR_X, -14 + ARR_Y, W, ARR_H + 14), "panel", radio=0)
         self.pix(t("tab.dia", "Día {d} de {t}", d=e.dia, t=e.total), 16, "oro", 18 + ARR_X, 9 + ARR_Y)
         self.txt(t("tab.luz", "Día lunar: hay sol") if de_dia else t("tab.noche", "Noche lunar: sin sol, −173 °C"),
                  15, "amarillo" if de_dia else "cian", 18 + ARR_X, 33 + ARR_Y)
-        x0, x1, yy = 330 + ARR_X, 1010 + ARR_X, 28 + ARR_Y
+        x0, x1, yy = MAP_X + ARR_X, MAP_X + MAP_W + ARR_X, MAP_Y + ARR_Y
         paso = (x1 - x0) / (e.total - 1)
         pygame.draw.line(self.lienzo, C["borde"], (x0, yy), (x1, yy), 2)
         for d in range(1, e.total + 1):
@@ -520,7 +525,8 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
         if interactivo:
             self.boton((W - 150 + ARR_X, 8 + ARR_Y, 136, 40), t("tab.menu", "Menú"),
                        lambda: setattr(self, "fase", "titulo"), tam=18)
-
+            self.boton((LB_X, LB_Y, LB_W, LB_H), t("tit.mapa", "Ver mapa"),
+                       lambda: None, tam=16)     
         # indicadores
         PX, PY = IND_X, IND_Y
         ancho = i_x(420)
@@ -559,7 +565,13 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
             y += i_y(79)
 
         # la base dibujada
-        self._escena(pygame.Rect(CEN_X, CEN_Y, c_x(440), c_y(330)))
+        # la base dibujada: se ajusta a la caja SIN deformarse y queda centrada
+        ASPECTO = 440 / 330          # ancho ÷ alto del dibujo (cambialo por el de tu imagen nueva)
+        hueco = pygame.Rect(CEN_X, CEN_Y, c_x(440), c_y(330))      # el espacio disponible
+        w = min(hueco.w, int(hueco.h * ASPECTO))
+        dib = pygame.Rect(0, 0, w, int(w / ASPECTO))
+        dib.center = hueco.center                                    # centrado en el hueco
+        self._escena(dib)
         # sistemas
         self.caja((CEN_X, CEN_Y + c_y(340), c_x(440), c_y(180)), "panel")
         r_sis = self.pix(t("tab.sis", "Sistemas"), c_f(16), "oro", CEN_X + c_x(16), CEN_Y + c_y(352))
