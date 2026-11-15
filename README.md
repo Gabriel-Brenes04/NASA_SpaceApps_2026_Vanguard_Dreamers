@@ -1,7 +1,7 @@
 # NASA_SpaceApps_2026_Vanguard_Dreamers
 Proyecto para presentar el dia domingo 15 de noviembre.
 
-# Base Lunar
+# Mission Survival
 
 **Junior astronaut mission simulator · Simulador de misión para astronautas junior**
 NASA Space Apps Challenge 2026 · Team Vanguard Dreamers
