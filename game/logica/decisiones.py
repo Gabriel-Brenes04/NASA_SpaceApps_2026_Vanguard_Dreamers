@@ -8,12 +8,13 @@ números, y la explicación con la cuenta. Python puro (sin pygame).
 Ideas del equipo integradas: el muro de agua alrededor del dormitorio (arquitecto), el
 reactor que se enciende al caer la noche, y el ángulo del panel solar.
 """
-from ..data import datos_nasa as N
+from . import clima
+from . import datos_nasa as N
 from . import simulador as S
-from ..assets.textos import t, n
+from .textos import t, n
 
 # ══ Calendario: qué decisión toca cada día ════════════════════════════════════════════════
-UNICAS = ("temperatura", "llamada", "angulo")
+UNICAS = ("temperatura", "angulo")          # «llamada» va fija en el calendario
 REPETIBLES = {"racion": 3, "electrolisis": 2, "hielo": 3, "gravedad": 2, "oxigeno": 3}
 
 
@@ -42,6 +43,10 @@ def armar_calendario(rng, e):
         d = libre(a, b) or libre(3, T - 1)
         if d:
             plan[d] = ident
+    # el retraso de la comunicación (lo pide el reto) sale en TODAS las misiones, una noche
+    d = libre(L + 1, T - 1) or libre(3, T - 1)
+    if d:
+        plan[d] = "llamada"
     return plan
 
 
@@ -238,13 +243,16 @@ def _d_tormenta(m, nivel):
                       d=n(dosis), tot=n(e.dosis))]
         return _
     volver = adentro if llegan else 0.5 * msv + 0.5 * adentro
+    real = clima.evento_real(m.rng, nivel)          # una fulguración real de DONKI (datos guardados)
+    texto_real = ("\n" + t("tor.real", "Basada en una fulguración real: la {c} del {f}, registrada por la NASA "
+                                       "(DONKI).", c=real["clase"], f=clima.fecha(real["pico"]))) if real else ""
     return S.Decision(
         "tormenta",
         t("tor.tit", "¡Fulguración solar!"),
         t("tor.enun", "Una tormenta {niv}: afuera, sin protección, daría {msv} mSv. Las partículas llegan "
                       "en {a} minutos (la NASA dice que las más rápidas tardan de 15 a 30). Dos tripulantes "
                       "están a {d} m del hábitat y caminan a {v} m/s con el traje. ¿Qué hacen?",
-          niv=t("tor." + nivel, nivel), msv=msv, a=aviso, d=n(d, 0), v=n(v)),
+          niv=t("tor." + nivel, nivel), msv=msv, a=aviso, d=n(d, 0), v=n(v)) + texto_real,
         [S.Opcion(t("tor.a", "Volver corriendo al refugio del hábitat"), recibir(volver), llegan),
          S.Opcion(t("tor.b", "Meterse al rover presurizado, que está ahí cerca"), recibir(0.6 * msv, -3),
                   not llegan),
@@ -254,7 +262,9 @@ def _d_tormenta(m, nivel):
                      "{fr} (refugio) = {ad} mSv; en el rover pasa {{{{6|10}}}}: {ro} mSv.",
           d=n(d, 0), v=n(v), s=n(seg, 0), mi=n(minutos), a=aviso,
           si=(t("tor.si", "sí alcanzan") if llegan else t("tor.no", "NO alcanzan")),
-          msv=msv, fh=n(e.factor_habitat(), 2), fr=n(e.refugio, 1), ad=n(adentro), ro=n(0.6 * msv, 0)),
+          msv=msv, fh=n(e.factor_habitat(), 2), fr=n(e.refugio, 1), ad=n(adentro), ro=n(0.6 * msv, 0))
+        + "\n" + t("tor.escala", "Las fulguraciones se miden con letras: una X es 10 veces más fuerte que una M y "
+                                 "100 veces más que una C (NASA). Las dosis del juego son una simplificación."),
         datos=[t("tor.d1", "Límite de la NASA: 250 mSv · Llevan {d}", d=n(e.dosis))], evento=True)
 
 
@@ -277,7 +287,8 @@ def _d_mancha(m):
         t("man.tit", "Una mancha solar muy activa"),
         t("man.enun", "Los observatorios ven una mancha solar muy activa: puede venir una tormenta fuerte. "
                       "Hoy podés cubrir el hábitat con 1 m más de regolito. Cuesta 40 kWh de la excavadora y "
-                      "el trabajo de todo el día. Ahora tiene {m} m. ¿Lo cubren?", m=n(e.regolito)),
+                      "el trabajo de todo el día. Ahora tiene {m} m. ¿Lo cubren?", m=n(e.regolito))
+        + "\n" + t("man.sol", "Mientras tanto, en el Sol de verdad: {r}", r=clima.resumen()),
         [S.Opcion(t("man.oa", "Sí, cubrir con 1 m más"), cubrir, alcanza),
          S.Opcion(t("man.ob", "No, seguir con el trabajo normal"), lambda e: [], not alcanza)],
         t("man.exp", "En el refugio, una tormenta fuerte daría 200 × {f1} × {r} = {d1} mSv. Con un metro "

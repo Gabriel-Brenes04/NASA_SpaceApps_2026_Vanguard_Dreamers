@@ -100,7 +100,7 @@ class Juego(MenuInicial):
     SIN_JUGAR = 0.9                    # rendimiento si se salta un microjuego que sí existe
 
     def elegir_tarea(self, tid):
-        if tid == "cosecha":
+        if tid == "paneles":
             if self.jugar_micro:
                 tamano = self.ventana.get_size()
                 try:
@@ -111,9 +111,10 @@ class Juego(MenuInicial):
                     else:
                         self.ventana = pygame.display.set_mode(tamano, pygame.RESIZABLE)
                     pygame.display.set_caption("Mission Survival")
+                    sonido.parar_bucles()
             self.hacer_tarea(tid, 1.0)
             return
-        if tid == "regolito":
+        if tid == "radiacion":
             if self.jugar_micro:
                 tamano = self.ventana.get_size()
                 try:
@@ -124,6 +125,7 @@ class Juego(MenuInicial):
                     else:
                         self.ventana = pygame.display.set_mode(tamano, pygame.RESIZABLE)
                     pygame.display.set_caption("Mission Survival")
+                    sonido.parar_bucles()
             self.hacer_tarea(tid, 1.0)
             return
         clase = minijuegos.para_tarea(tid)
@@ -135,6 +137,9 @@ class Juego(MenuInicial):
             self.hacer_tarea(tid, self.SIN_JUGAR if clase else 1.0)
 
     def terminar_micro(self, saltado=False):
+        sonido.parar_bucles()
+        if saltado and getattr(self.mj, "etapa", None) == "final":
+            saltado = False                # ESC en la tarjeta final: vale lo que ya se jugó
         r = self.SIN_JUGAR if saltado else self.mj.rendimiento_seguro()
         tid = self.mj_tid
         self.mj, self.mj_tid = None, None
@@ -783,8 +788,8 @@ class Juego(MenuInicial):
                    t("tar.micro_si", "minijuegos: SÍ") if self.jugar_micro else t("tar.micro_no", "minijuegos: NO"),
                    lambda: setattr(self, "jugar_micro", not self.jugar_micro),
                    "verde" if self.jugar_micro else "panel2", tam=18)
-        colores = {"cosecha": "verde", "oxigeno": "cian", "regolito": "naranja", "hielo": "azul",
-                   "recreo": "rosa", "estiba": "amarillo"}
+        colores = {"cosecha": "verde", "oxigeno": "cian", "radiacion": "naranja", "hielo": "azul",
+                   "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo"}
         for i, tid in enumerate(ts):
             fila, col = divmod(i, 3)
             r = pygame.Rect(p.x + 40 + col * 312, p.y + 140 + fila * 150, 296, 136)
@@ -792,7 +797,7 @@ class Juego(MenuInicial):
             pygame.draw.rect(self.lienzo, C[colores[tid]], (r.x + 2, r.y + 2, 10, r.h - 4), border_radius=6)
             self.rico(f"{i + 1} · " + S.tarea_titulo(tid), 20, "texto", r.x + 26, r.y + 16, r.w - 40, True)
             self.rico(S.tarea_detalle(tid), 17, "gris", r.x + 26, r.y + 76, r.w - 40)
-            if minijuegos.para_tarea(tid) and self.jugar_micro:
+            if (tid in ("paneles", "radiacion") or minijuegos.para_tarea(tid)) and self.jugar_micro:
                 chip = pygame.Rect(r.right - 104, r.bottom - 34, 92, 24)
                 pygame.draw.rect(self.lienzo, C["oro"], chip, border_radius=7)
                 self.txt(t("tar.sejuega", "se juega"), 15, "fondo", chip.centerx, chip.centery, True, centro=True)

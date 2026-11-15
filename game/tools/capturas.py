@@ -19,8 +19,8 @@ sys.path.insert(0, RAIZ)
 sys.path.insert(0, os.path.join(RAIZ, "tools"))
 
 import pygame  # noqa: E402
-from base.base_lunar.juego import Juego  # noqa: E402
-import base.tools.simular_misiones as SM  # noqa: E402
+from base_lunar.juego import Juego  # noqa: E402
+import simular_misiones as SM  # noqa: E402
 
 
 def guardar(j, carpeta, nombre, hechas):
@@ -85,8 +85,9 @@ def jugar(j, semilla, tipo, rng, carpeta=None, hechas=None, modo="completa"):
                                              pos=(rng.randint(60, 1220), rng.randint(130, 660)))]
                 j._dt = 1 / 60
                 j.paso_micro(ev)
-                j.dibujar()
-                if cuadros == 200:
+                if cuadros % 20 == 0 or cuadros == 600:     # dibujar cada cuadro tardaría demasiado
+                    j.dibujar()
+                if cuadros == 600:
                     guardar(j, carpeta, "08b_microjuego", hechas)
                 cuadros += 1
             j.dibujar()
@@ -103,6 +104,11 @@ def jugar(j, semilla, tipo, rng, carpeta=None, hechas=None, modo="completa"):
 def main():
     args = sys.argv[1:]
     carpeta = args[args.index("--salida") + 1] if "--salida" in args else os.path.join(RAIZ, "_capturas")
+    if "--en" in args:
+        from base_lunar import textos
+        textos.poner_idioma("en")
+        if "--salida" not in args:
+            carpeta = os.path.join(RAIZ, "_capturas", "en")
     os.makedirs(carpeta, exist_ok=True)
     j = Juego(ventana=False)
     rng = random.Random(7)

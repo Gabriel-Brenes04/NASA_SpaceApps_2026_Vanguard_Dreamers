@@ -170,7 +170,7 @@ class Estado:
 
 
 # ══ Tareas del día (cada una se volverá un minijuego; `r` = rendimiento 0,4 a 1,3) ═══════
-TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba")
+TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba", "paneles")
 
 
 def tarea_titulo(tid):

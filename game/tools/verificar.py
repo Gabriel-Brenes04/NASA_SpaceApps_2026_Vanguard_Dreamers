@@ -7,7 +7,7 @@ Revisa, sin abrir ventana:
   1. que todo el paquete importe;
   2. que los datos de la NASA tengan su fuente;
   3. que las 17 decisiones se armen sin errores y siempre tengan al menos una opción correcta;
-  4. que cada microjuego cumpla las reglas (termina solo, dura 5-10 s, rendimiento 0,4-1,3, no rompe
+  4. que cada microjuego cumpla las reglas (termina solo, dura 5-45 s, rendimiento 0,4-1,3, no rompe
      con clics al azar ni sin ningún clic, dibuja dentro de la pantalla);
   5. que las misiones completas (28 días) y cortas (14) corran enteras, y el balance (el experto gana
      casi siempre y el descuidado casi nunca);
@@ -18,8 +18,6 @@ import os
 import random
 import re
 import sys
-
-from base.base_lunar import datos_nasa, decisiones, juego, simulador, texto_mate, textos
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -45,7 +43,7 @@ def main():
     pygame.display.set_mode((1, 1))
 
     print("1. Paquete")
-    from base.base_lunar import microjuegos  # noqa: F401
+    from base_lunar import datos_nasa, decisiones, juego, microjuegos, simulador, textos, texto_mate  # noqa: F401
     ok("base_lunar importa completo")
 
     print("2. Datos de la NASA")
@@ -89,8 +87,8 @@ def main():
         nombre = f"{clase.__module__.split('.')[-1]}.py ({tarea})"
         if tarea not in simulador.TAREAS:
             falla(f"{nombre}: la tarea «{tarea}» no existe; son {simulador.TAREAS}")
-        if not 5 <= clase.duracion <= 10:
-            falla(f"{nombre}: dura {clase.duracion} s; tiene que ser de 5 a 10")
+        if not 5 <= clase.duracion <= 45:
+            falla(f"{nombre}: dura {clase.duracion} s; tiene que ser de 5 a 45")
         for modo in ("sin clics", "clics al azar"):
             rng = random.Random(3)
             try:
@@ -106,7 +104,7 @@ def main():
                         break
                     mj.dibujar_todo(lienzo, texto_mate.fuente)
                     cuadros += 1
-                    if cuadros > 60 * 15:
+                    if cuadros > 60 * 60:
                         falla(f"{nombre}: no termina solo ({modo})")
                         break
                 r = mj.rendimiento()
@@ -122,7 +120,7 @@ def main():
         print(f"  · todavía sin microjuego (se hacen automáticas): {', '.join(faltan)}")
 
     print("5. Misiones completas y balance")
-    import base.tools.simular_misiones as SM
+    import simular_misiones as SM
     rng = random.Random(9)
     for modo in ("completa", "corta"):
         for tipo, minimo, maximo in (("experto", 95, 100), ("descuidado", 0, 15)):
@@ -130,6 +128,24 @@ def main():
             pct = 100 * ganadas / 60
             (ok if minimo <= pct <= maximo else falla)(
                 f"misión {modo}, {tipo}: gana {pct:.0f} % (se espera {minimo}–{maximo} %)")
+
+    print("5a. Clima espacial real (NASA DONKI)")
+    from base_lunar import clima
+    d = clima.datos()
+    ev = d.get("eventos", [])
+    x = [e for e in ev if e.get("clase", "").startswith("X")]
+    mm = [e for e in ev if e.get("clase", "").startswith("M")]
+    if not x or not mm:
+        falla("base_lunar/datos/donki.json no tiene fulguraciones X y M (correr tools/bajar_donki.py)")
+    elif any(not (e.get("pico") and e.get("enlace", "").startswith("https://")) for e in ev):
+        falla("hay eventos de DONKI sin fecha o sin enlace")
+    else:
+        ok(f"{len(ev)} fulguraciones reales guardadas ({len(x)} X, {len(mm)} M), hasta el {d.get('hasta')}")
+    r = clima.resumen()
+    if clima.VIVO.get("estado") != "listo" and "no en vivo" not in r:
+        falla("sin conexión, el resumen del Sol no dice que los datos son guardados")
+    else:
+        ok("el juego dice si el clima espacial es en vivo o guardado")
 
     print("5b. Letras incluidas con su licencia")
     carpeta_f = os.path.join(RAIZ, "base_lunar", "fuentes")
@@ -140,6 +156,30 @@ def main():
         falla("la letra Press Start 2P no está anotada en CREDITOS.md")
     else:
         ok(f"{len(ttfs)} letra(s) con licencia y en los créditos")
+
+    print("5c. Inglés")
+    import textos as T
+    claves, faltan, malas, _sobran = T.revisar()
+    if faltan or malas:
+        falla(f"inglés: faltan {len(faltan)} textos y {len(malas)} tienen llaves distintas (python tools/textos.py revisar)")
+    else:
+        ok(f"{len(claves)} textos traducidos con las mismas llaves")
+    from base_lunar import textos as TX
+    TX.poner_idioma("en")
+    try:
+        for semilla in range(30):
+            modo = ("completa", "corta")[semilla % 2]
+            m = simulador.Mision(semilla, modo)
+            m.e.dia = 1 + semilla % m.total
+            for ident in ids:
+                decisiones.construir(ident, m)
+            for tid in simulador.TAREAS:
+                simulador.tarea_titulo(tid), simulador.tarea_detalle(tid)
+        ok("las decisiones se arman en inglés sin errores")
+    except Exception as ex:  # noqa: BLE001
+        falla(f"una decisión revienta en inglés: {ex!r}")
+    finally:
+        TX.poner_idioma("es")
 
     print("6. Nada que no deba ir al repositorio")
     patrones = [r"\.jks", r"\.keystore", r"\.pem", r"config\.php", r"conexion\.php", r"\.env\b",

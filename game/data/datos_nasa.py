@@ -76,4 +76,12 @@ FUENTES = [
      "https://www.nasa.gov/centers/ames/news/releases/2010/10-89AR.html", True),
     ("1,37 mSv por día medidos en la superficie", "Zhang et al., Science Advances 6, eaaz1334 (2020)",
      "https://www.science.org/doi/10.1126/sciadv.aaz1334", False),
+    ("Fulguraciones y partículas solares reales (2024 a hoy)", "NASA CCMC DONKI (Moon to Mars Space Weather Office)",
+     "https://ccmc.gsfc.nasa.gov/tools/DONKI/", True),
+    ("Una fulguración X es 10 veces una M y 100 veces una C", "NASA Science, Solar Storms and Flares",
+     "https://science.nasa.gov/sun/solar-storms-and-flares/", True),
+    ("La Tierra mide 12 742 km de ancho; la Luna, 3 475 km", "NSSDC Moon Fact Sheet",
+     "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html", True),
+    ("Hielo en la superficie de cráteres en sombra (M3, 2018)", "NASA Science, Moon Water and Ices",
+     "https://science.nasa.gov/moon/moon-water-and-ices/", True),
 ]

@@ -12,10 +12,10 @@ Python puro: no usa pygame.
 """
 IDIOMA = "es"
 
-EN = {
-    # Se llena en la etapa E5 (inglés). Ejemplo:
-    # "noche.titulo": "Lunar night is falling",
-}
+try:
+    from .textos_en import EN          # las traducciones (una por clave)
+except ImportError:
+    EN = {}
 
 
 def poner_idioma(idioma):

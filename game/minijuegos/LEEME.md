@@ -1,23 +1,39 @@
 # Cómo hacer un microjuego para Base Lunar
 
-Cada tarea del día puede ser un **microjuego** de 5 a 10 segundos que se juega **solo con el ratón**.
+Cada tarea del día puede ser un **microjuego** de 5 a 45 segundos que se juega **solo con el ratón**.
 Lo bien que te vaya cambia cuánto rinde la tarea: de 0,4 (muy mal) a 1,3 (perfecto).
 
-## Los que faltan
+## Los que hay
 
 | Archivo | Tarea que reemplaza | Qué da | Idea |
 |---|---|---|---|
-| `huerto.py` | `cosecha` | comida | Arrastrar la gota de agua a las macetas que se marchitan |
-| `paneles.py` | `regolito` o la que se acuerde | energía / blindaje | Girar el panel hasta la zona verde, de frente al Sol |
-| `escudo.py` | `regolito` | blindaje | Clic cuando la barra pase por la zona segura |
-| `oxigeno.py` | `oxigeno` | oxígeno | Clic en las grietas de la válvula, o seguir la lista de verificación |
+| `oxigeno.py` | `oxigeno` | oxígeno | Sellar fugas antes de que se rajen las tuberías; la presión baja más rápido entre más fugas haya (y sube sola sin fugas); cada tanque lleno = 1 astronauta, 1 día (40 s) |
+| `hielo.py` | `hielo` | agua | Llevar el vehículo por un suelo con lomitas y cráteres, perforar y soltar dentro de las bolsas de hielo; desde el nivel 3, radar (38 s) |
+| `recreo.py` | `recreo` | ánimo | Tomarle fotos a la Tierra con zoom (apretar y soltar): relámpagos, auroras, huracanes, cometas, naves y encargos (hasta Costa Rica) (40 s) |
+| `estiba.py` | `estiba` | más carga del cohete | Soltar las bolsas en su sección (3 × 6) sin dejar huecos; se pueden cambiar por las de la cinta; las secciones llenas se sellan (solo el día que llega el cohete) (45 s) |
 
-`estrellas.py` (el recreo) ya está hecho: es el **ejemplo** para copiar ideas.
-Las tareas que todavía no tienen microjuego se hacen solas, sin jugar.
+Las tareas `cosecha` (huerto), `paneles` y `regolito` (escudo) las hace el resto del equipo; mientras su
+microjuego no esté aquí, esas tareas se hacen solas.
 
-> Ojo con `paneles` y `escudo`: hoy el simulador tiene las tareas `cosecha`, `oxigeno`, `regolito`,
-> `hielo`, `recreo` y `estiba`. Si un microjuego necesita una tarea nueva (por ejemplo, «alinear los
-> paneles» que dé energía), se agrega en `simulador.py`: avisen y se hace.
+### Los largos usan el kit (`_kit.py`)
+
+`oxigeno`, `hielo`, `recreo` y `estiba` duran de 35 a 45 s y heredan de `Partida` (en `_kit.py`) en vez de
+`Microjuego`. El kit trae hecho:
+
+- la cuenta regresiva 3-2-1-¡YA! con la instrucción grande, y la tarjeta final con puntos y 1 a 3 estrellas;
+- un **nivel que se adapta** (1 a 8): sube con los aciertos y baja con los errores. Así un niño de 7 años y un
+  adulto juegan cada uno a su medida;
+- puntos con **combo** (aciertos seguidos multiplican ×2, ×3…), una nota musical que sube con cada acierto y
+  los últimos 8 segundos con puntos dobles;
+- efectos: chispas con brillo, anillos, textos que flotan, sacudidas y carteles;
+- sonidos sintetizados (`sonido.play`, `sonido.bucle` para los que se repiten).
+
+En vez de `iniciar/actualizar/dibujar` se llenan `preparar`, `jugar` (la lógica), `animar` (lo que se mueve
+siempre) y `escena` (el dibujo); se gana con `self.ganar(...)`, se pierde con `self.perder(...)` y un clic al
+aire se marca con `self.errar(x, y)`. El rendimiento sale solo de los puntos (`META`, en escala logarítmica).
+
+> Las tareas del simulador son `cosecha`, `oxigeno`, `regolito`, `hielo`, `recreo`, `estiba` y `paneles`
+> (esta última solo de día). Si un microjuego necesita una tarea nueva, se agrega en `simulador.py`.
 
 ## Paso a paso
 
@@ -45,7 +61,7 @@ su archivo y nadie le pisa el trabajo a nadie.
 - **Solo `pygame-ce`.** Nada de otras librerías.
 - **Solo el ratón:** `self.clics` (los clics de este cuadro), `self.raton` (dónde está) y `self.apretado`
   (si el botón está apretado, para arrastrar).
-- **De 5 a 10 segundos** (`duracion`). Se acaba solo; si el jugador ya ganó, `self.terminar()`.
+- **De 5 a 45 segundos** (`duracion`). Se acaba solo; si el jugador ya ganó, `self.terminar()`.
 - **Velocidades por `dt`:** `x += velocidad * dt`. Así corre igual en cualquier computadora.
 - **Dibujar dentro de `ZONA`** (x 40 a 1240, y 110 a 680). Arriba van el título y el reloj.
 - **Números al azar con `self.rng`**, no con `random`.
