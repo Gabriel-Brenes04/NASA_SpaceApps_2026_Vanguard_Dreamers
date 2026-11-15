@@ -177,15 +177,9 @@ class Estado:
             "invernadero": self.sistemas["invernadero"]}
 
 
-<<<<<<< HEAD:base_lunar/simulador.py
-# ══ Tareas del día (cada una se volverá un minijuego; `r` = rendimiento 0,4 a 1,3) ═══════
-TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba", "paneles")
-PANELES_KWH = 60                 # kWh extra por limpiar y alinear los paneles (parámetro del juego)
-=======
 # ══ Tareas del día (cada una puede ser un minijuego; `r` = rendimiento 0,4 a 1,3) ════════════
 # Siempre se muestran las 7. Las que hoy no se pueden hacer salen apagadas, con el motivo.
 TAREAS = ("cosecha", "oxigeno", "radiacion", "hielo", "recreo", "estiba", "paneles")
->>>>>>> datos:game/logica/simulador.py
 
 
 def tarea_titulo(tid):
@@ -266,20 +260,6 @@ class Mision:
     def tareas_estado(self):
         """Las 7 tareas, siempre: [(id, se_puede, motivo_si_no)]."""
         e = self.e
-<<<<<<< HEAD:base_lunar/simulador.py
-        if e.sin_tarea:
-            return []
-        ts = ["oxigeno", "hielo", "recreo"]
-        if e.sistemas["invernadero"]:
-            ts.insert(0, "cosecha")
-        if e.regolito < 3:
-            ts.append("regolito")
-        if e.de_dia():
-            ts.append("paneles")
-        if e.carga_hoy:
-            ts.append("estiba")
-        return ts
-=======
         res = []
         for tid in TAREAS:
             motivo = ""
@@ -298,7 +278,6 @@ class Mision:
 
     def tareas_disponibles(self):
         return [tid for tid, ok, _ in self.tareas_estado() if ok]
->>>>>>> datos:game/logica/simulador.py
 
     def hacer_tarea(self, tid, r=1.0):
         """Aplica la tarea con rendimiento r (1 = normal; el minijuego lo sube o lo baja)."""

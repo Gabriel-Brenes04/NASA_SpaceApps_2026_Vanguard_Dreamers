@@ -7,17 +7,6 @@ números, y la explicación con la cuenta. Python puro (sin pygame).
 
 Ideas del equipo integradas: el muro de agua alrededor del dormitorio (arquitecto), el
 reactor que se enciende al caer la noche, y el ángulo del panel solar.
-<<<<<<< HEAD:base_lunar/decisiones.py
-"""
-from . import clima
-from . import datos_nasa as N
-from . import simulador as S
-from .textos import t, n
-
-# ══ Calendario: qué decisión toca cada día ════════════════════════════════════════════════
-UNICAS = ("temperatura", "angulo")          # «llamada» va fija en el calendario
-REPETIBLES = {"racion": 3, "electrolisis": 2, "hielo": 3, "gravedad": 2, "oxigeno": 3}
-=======
 
 Datos de los recursos del reto que mueven decisiones: DONKI (la fulguración real y su clase escalan
 la tormenta), RadLab (unidades de radiación: µSv/h → mSv por día) y la CSA (calorías de un astronauta,
@@ -32,7 +21,6 @@ from ..assets.textos import t, n
 UNICAS = ("temperatura", "angulo")          # «llamada» va fija en el calendario
 REPETIBLES = {"racion": 3, "electrolisis": 2, "hielo": 3, "gravedad": 2, "oxigeno": 3,
               "dosimetro": 2, "ejercicio": 2}
->>>>>>> datos:game/logica/decisiones.py
 
 
 def armar_calendario(rng, e):
@@ -60,11 +48,7 @@ def armar_calendario(rng, e):
         d = libre(a, b) or libre(3, T - 1)
         if d:
             plan[d] = ident
-<<<<<<< HEAD:base_lunar/decisiones.py
-    # el retraso de la comunicación (lo pide el reto) sale en TODAS las misiones, una noche
-=======
     # el retraso de la comunicación sale en TODAS las misiones, una noche
->>>>>>> datos:game/logica/decisiones.py
     d = libre(L + 1, T - 1) or libre(3, T - 1)
     if d:
         plan[d] = "llamada"
@@ -269,11 +253,6 @@ def _d_tormenta(m, nivel):
                       d=n(dosis), tot=n(e.dosis))]
         return _
     volver = adentro if llegan else 0.5 * msv + 0.5 * adentro
-<<<<<<< HEAD:base_lunar/decisiones.py
-    real = clima.evento_real(m.rng, nivel)          # una fulguración real de DONKI (datos guardados)
-    texto_real = ("\n" + t("tor.real", "Basada en una fulguración real: la {c} del {f}, registrada por la NASA "
-                                       "(DONKI).", c=real["clase"], f=clima.fecha(real["pico"]))) if real else ""
-=======
     texto_real = ""
     if real:
         texto_real = "\n" + t("tor.real", "Basada en una fulguración real: la {c} del {f}, registrada por la NASA "
@@ -284,7 +263,6 @@ def _d_tormenta(m, nivel):
             texto_real += t("tor.real_part", " DONKI anotó que lanzó partículas solares.")
     escala_real = (" " + t("tor.escala_real", "El juego escala la dosis con la clase real ({c}): {b} × {s} = {m} mSv.",
                            c=real["clase"], b=base, s=n(esc, 2), m=msv)) if real else ""
->>>>>>> datos:game/logica/decisiones.py
     return S.Decision(
         "tormenta",
         t("tor.tit", "¡Fulguración solar!"),
@@ -303,14 +281,9 @@ def _d_tormenta(m, nivel):
           si=(t("tor.si", "sí alcanzan") if llegan else t("tor.no", "NO alcanzan")),
           msv=msv, fh=n(e.factor_habitat(), 2), fr=n(e.refugio, 1), ad=n(adentro), ro=n(0.6 * msv, 0))
         + "\n" + t("tor.escala", "Las fulguraciones se miden con letras: una X es 10 veces más fuerte que una M y "
-<<<<<<< HEAD:base_lunar/decisiones.py
-                                 "100 veces más que una C (NASA). Las dosis del juego son una simplificación."),
-        datos=[t("tor.d1", "Límite de la NASA: 250 mSv · Llevan {d}", d=n(e.dosis))], evento=True)
-=======
                                  "100 veces más que una C. Las dosis del juego son una simplificación: DONKI "
                                  "registra los eventos, no la dosis en la Luna.") + escala_real,
         datos=[t("tor.d1", "Límite de la misión: 250 mSv · Llevan {d}", d=n(e.dosis))], evento=True)
->>>>>>> datos:game/logica/decisiones.py
 
 
 # 5 · Mancha solar: ¿más regolito?
