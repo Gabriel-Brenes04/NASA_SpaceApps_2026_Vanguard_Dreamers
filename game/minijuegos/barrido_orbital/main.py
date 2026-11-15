@@ -10,6 +10,7 @@ from .systems.detector import DetectorSystem
 from .systems.orbit_manager import OrbitManager
 from .systems.tutorial import TutorialScreen
 from .systems.sound_manager import SoundManager
+from .systems.starfield import Starfield   
 
 def reset_game(sound_manager):
     """Inicializa o reinicia todas las variables de estado de la partida."""
@@ -43,6 +44,7 @@ def main(screen=None, cerrar_pygame=True):
     sound_manager = SoundManager()
     tutorial = TutorialScreen(sound_manager)
     modules, detector_system, orbit_manager, particles, current_dose, score = reset_game(sound_manager)
+    starfield = Starfield()
 
     while running:
         # Captura de entradas del frame
@@ -73,6 +75,7 @@ def main(screen=None, cerrar_pygame=True):
         # ==========================================
         if not tutorial.active:
             orbit_manager.update(dt, current_dose)
+            starfield.update(dt, orbit_manager.in_saa)
 
             # Alarma sonora una vez al entrar a la Anomalía del Atlántico Sur
             if orbit_manager.in_saa and not sound_manager.saa_alarm_played:
@@ -110,6 +113,7 @@ def main(screen=None, cerrar_pygame=True):
         # 4. SALIDA VISUAL (Renderizado)
         # ==========================================
         screen.fill(orbit_manager.current_bg_color)
+        starfield.draw(screen)
 
         for mod in modules:
             mod.draw(screen, small_font)

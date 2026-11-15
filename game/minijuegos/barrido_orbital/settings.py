@@ -29,7 +29,7 @@ MODULES_CONFIG = [
 PARTICLE_TYPES = {
     "electron": {
         "color": (0, 220, 255),
-        "speed": 330,
+        "speed": 400,
         "radius": 6,
         "dose": 5.0,
         "points": 10,
@@ -37,7 +37,7 @@ PARTICLE_TYPES = {
     },
     "proton": {
         "color": (255, 200, 0),
-        "speed": 240,
+        "speed": 350,
         "radius": 10,
         "dose": 12.0,
         "points": 25,
@@ -45,7 +45,7 @@ PARTICLE_TYPES = {
     },
     "heavy_ion": {
         "color": (255, 50, 100),
-        "speed": 150,
+        "speed": 200,
         "radius": 15,
         "dose": 25.0,
         "points": 50,
@@ -58,9 +58,9 @@ SPAWN_INTERVAL = 1.0         # Segundos entre cada partícula
 CLICK_MARGIN = 12            # Píxeles extra para facilitar el clic
 TRAIL_MAX_LENGTH = 14        # Largo de la estela visual
 ORBIT_DURATION = 15.0        # Duración total en segundos
-SAA_START = 10.0             # Inicio Anomalía del Atlántico Sur
-SAA_END = 15.0               # Fin Anomalía del Atlántico Sur
-MAX_DOSE = 50.0             # Límite de radiación antes de perder
+SAA_START = 7.0             # Inicio Anomalía del Atlántico Sur
+SAA_END = 12.0               # Fin Anomalía del Atlántico Sur
+MAX_DOSE = 30             # Límite de radiación antes de perder
 
 # Configuración de Detectores
 DETECTORS_CONFIG = {
@@ -68,7 +68,7 @@ DETECTORS_CONFIG = {
         "key": "1",
         "label": "[1] LIULIN (Área + -Dosis)",
         "color": (0, 220, 255),
-        "aoe_radius": 75,         # Radio de barrido en área (px)
+        "aoe_radius": 45,         # Radio de barrido en área (px)
         "dose_reduction": 1.5,    # Reduce dosis si acierta el ideal (electrón)
         "cooldown": 0.15
     },
@@ -136,3 +136,9 @@ FONT_PATH = os.path.join(BASE_DIR, "assets", "PressStart2P-Regular.ttf")
 MAIN_FONT_SIZE = 14
 SMALL_FONT_SIZE = 10
 TINY_FONT_SIZE = 8
+
+# Configuración de Fondo Estelar (Parallax Orbital)
+STAR_COUNT = 65              # Cantidad total de estrellas en pantalla
+STAR_SPEED_MIN = 15.0        # Velocidad estrellas lejanas (px/s)
+STAR_SPEED_MAX = 65.0        # Velocidad estrellas cercanas (px/s)
+
