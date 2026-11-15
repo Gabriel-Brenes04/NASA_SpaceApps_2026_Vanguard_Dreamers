@@ -39,6 +39,7 @@ Fecha de lectura de las páginas: 15/11/2026.
 | Electrólisis | 36 g de agua → 32 g de O₂ (fórmula química) | [NASA ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/) |
 | Hielo lunar | LCROSS 2009, M3 2018 | [NASA Science](https://science.nasa.gov/moon/moon-water-and-ices/) |
 | Clases de fulguración | X = 10 × M | [NASA Science](https://science.nasa.gov/sun/solar-storms-and-flares/) |
+| Lechuga en el espacio (nota del huerto) | Veggie, 2015 | [NASA, blog de la Estación, 10/08/2015](https://www.nasa.gov/blogs/spacestation/2015/08/10/cosmonauts-complete-russian-spacewalk) |
 
 
 ## Por qué DONKI · Why DONKI

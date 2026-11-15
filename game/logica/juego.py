@@ -601,83 +601,10 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
 
     # ── la base dibujada ────────────────────────────────────────────────────────────────
     def _escena(self, r):
-        e = self.m.e
-        s = self.lienzo
-        de_dia = e.de_dia()
-        pygame.draw.rect(s, (3, 4, 12), r, border_radius=12)
-        s.set_clip(r.inflate(-4, -4))
-        self.cielo(r, 1.0 if not de_dia else 0.6)
-        if de_dia:
-            for rad, a in ((46, 30), (36, 60), (28, 255)):
-                g = pygame.Surface((rad * 2, rad * 2), pygame.SRCALPHA)
-                pygame.draw.circle(g, (255, 236, 150, a), (rad, rad), rad)
-                s.blit(g, (r.x + 70 - rad, r.y + 58 - rad))
-        tx, ty = r.right - 70, r.y + 56
-        pygame.draw.circle(s, (40, 100, 200), (tx, ty), 22)
-        pygame.draw.circle(s, (70, 160, 90), (tx - 6, ty - 5), 9)
-        pygame.draw.circle(s, (230, 235, 245), (tx + 8, ty + 6), 6)
-        self.txt(t("esc.tierra", "la Tierra"), 12, "gris", tx, ty + 30, centro=True)
-        suelo = (126, 126, 134) if de_dia else (42, 44, 56)
-        pts = [(r.x, r.y + 214)] + [(r.x + i * 20, r.y + 210 + int(6 * math.sin(i * 0.9))) for i in range(r.w // 20 + 2)]
-        pts += [(r.right, r.bottom), (r.x, r.bottom)]
-        pygame.draw.polygon(s, suelo, pts)
-        for cx, cy, rx in ((r.x + 60, r.y + 300, 36), (r.x + 330, r.y + 296, 28), (r.x + 200, r.y + 312, 18)):
-            pygame.draw.ellipse(s, tuple(max(0, c - 22) for c in suelo), (cx - rx, cy - rx // 4, rx * 2, rx // 2))
-        # panel solar
-        px, py = r.x + 58, r.y + 250
-        pygame.draw.line(s, (170, 170, 180), (px, py), (px, py - 46), 3)
-        ang = math.radians(35 if e.panel_factor <= 0.5 else 0)
-        wv, hv = 80, 34
-        cx, cy = px, py - 58
-        esquinas = [(-wv / 2, -hv / 2), (wv / 2, -hv / 2), (wv / 2, hv / 2), (-wv / 2, hv / 2)]
-        poli = [(cx + x * math.cos(ang) - y * math.sin(ang), cy + x * math.sin(ang) + y * math.cos(ang))
-                for x, y in esquinas]
-        pygame.draw.polygon(s, (50, 90, 190) if de_dia else (24, 34, 70), poli)
-        pygame.draw.polygon(s, (170, 190, 240), poli, 2)
-        if e.panel_factor < 1 and e.panel_factor != 0.5:
-            pygame.draw.line(s, (255, 255, 255), (cx - 10, cy - 8), (cx + 6, cy + 9), 2)
-        self.txt(t("esc.panel", "panel solar"), 12, "gris", px, py + 4, centro=True)
-        # hábitat con el regolito encima
-        hx, hy = r.centerx - 24, r.y + 236
-        if e.regolito > 0:
-            grosor = int(6 * e.regolito)
-            pygame.draw.ellipse(s, (124, 104, 82), (hx - 86 - grosor, hy - 46 - grosor, 172 + 2 * grosor, 110 + 2 * grosor))
-        pygame.draw.ellipse(s, (215, 218, 226), (hx - 80, hy - 40, 160, 96))
-        pygame.draw.rect(s, (215, 218, 226), (hx - 80, hy + 4, 160, 30))
-        for i in range(3):
-            ventana_col = (255, 220, 120) if not de_dia else (60, 80, 120)
-            pygame.draw.circle(s, ventana_col, (hx - 40 + i * 40, hy + 6), 8)
-        cols = {0.3: (80, 150, 255), 0.6: (80, 200, 110), 1.0: (230, 200, 70)}
-        col = cols.get(e.refugio)
-        if col and e.refugio_elegido:
-            for dx in (-70, -35, 35, 70):
-                pygame.draw.rect(s, col, (hx + dx - 9, hy + 30, 18, 22), border_radius=4)
-        self.txt(t("esc.habitat", "hábitat ({m} m de regolito)", m=n(e.regolito)), 12, "gris", hx, hy + 64, centro=True)
-        # invernadero
-        gx, gy = r.right - 104, r.y + 262
-        on = e.sistemas["invernadero"]
-        if on:
-            g = pygame.Surface((110, 70), pygame.SRCALPHA)
-            pygame.draw.ellipse(g, (80, 230, 120, 70), g.get_rect())
-            s.blit(g, (gx - 55, gy - 52))
-        pygame.draw.ellipse(s, (120, 220, 150) if on else (90, 100, 110), (gx - 40, gy - 40, 80, 80), 3)
-        if on:
-            for i in range(4):
-                pygame.draw.line(s, (60, 200, 90), (gx - 24 + i * 16, gy), (gx - 24 + i * 16, gy - 18), 3)
-        pygame.draw.line(s, suelo, (gx - 44, gy + 1), (gx + 44, gy + 1), 3)
-        self.txt(t("esc.inv", "invernadero"), 12, "gris", gx, gy + 12, centro=True)
-        # reactor (se enciende de noche)
-        rx, ry = r.right - 26, r.y + 196
-        pygame.draw.rect(s, (150, 150, 160), (rx - 8, ry, 16, 40))
-        for i in range(3):
-            pygame.draw.line(s, (190, 190, 200), (rx + 8, ry + 6 + i * 12), (rx + 22, ry + i * 12), 2)
-        if not de_dia:
-            g = pygame.Surface((40, 40), pygame.SRCALPHA)
-            pygame.draw.circle(g, (255, 140, 40, 90 + int(40 * math.sin(self.cuadro * 0.08))), (20, 20), 18)
-            s.blit(g, (rx - 20, ry - 2))
-        self.txt(t("esc.reactor", "reactor"), 12, "gris", rx, ry + 46, centro=True)
-        s.set_clip(None)
-        pygame.draw.rect(s, C["borde"], r, 2, border_radius=12)
+        """La vista de la base, en pixel art (se dibuja en escenas/escena_pixel.py)."""
+        from ..escenas.escena_pixel import dibujar
+        dibujar(self, r)
+        pygame.draw.rect(self.lienzo, C["borde"], r, 2, border_radius=12)
 
     # ── decisión del día ────────────────────────────────────────────────────────────────
     def _panel_central(self):

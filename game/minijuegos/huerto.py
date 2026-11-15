@@ -1,0 +1,950 @@
+# -*- coding: utf-8 -*-
+"""Microjuego «Huerto» (tarea: cosecha → comida).
+
+El invernadero de la base: plantas en macetas de vidrio con bolitas de arcilla, bajo luces LED rojas y
+azules, como el Veggie de la Estación Espacial (en 2015 los astronautas se comieron allá la primera
+lechuga cultivada en el espacio, una romana roja: NASA, blog de la Estación, 10/08/2015).
+
+Cómo se juega (40 s):
+  · la REGADERA es el puntero: con el clic apretado se riega. El agua cae despacito (en la Luna la
+    gravedad es menor). La regadera se vacía: se llena poniéndola debajo de la llave del tanque;
+  · cada planta se va secando y con agua crece. Con sed se agacha y pide agua; sin agua se marchita y,
+    si nadie la salva a tiempo, se seca y se pierde;
+  · cuando una planta está lista (brilla), un clic encima la cosecha. Si se deja mucho, se pasa;
+  · el agua que cae fuera o que rebalsa una maceta llena se desperdicia (resta poquito);
+  · a veces hace calor en el domo (las plantas toman más agua) y a veces sale una planta dorada (vale doble).
+El nivel sube si se juega bien: las plantas toman agua más rápido y se abren más macetas (4, 5 y 6).
+Al azar rinde poco: la regadera se vacía y las plantas se secan.
+"""
+import math
+import random
+
+import pygame
+
+from .base import ZONA, COLORES
+from ._kit import Partida, luz, brillo, degradado, guardado, texto, mezclar, translucido, vineta, estrella
+from ..assets import sonido
+from ..assets.textos import t
+
+SUELO = 552                       # la boca de las macetas
+MACETA = (124, 72)                # ancho y alto de cada maceta
+CENTROS = (322, 474, 626, 778, 930, 1082)
+MESA_Y = SUELO + MACETA[1]        # la mesa donde están las macetas
+PISO_Y = 668
+GRIFO = (262, 278)                # la boca de la llave del tanque
+TANQUE = pygame.Rect(66, 318, 128, 282)
+PUNTA = (12, 95)                  # la flor de la regadera en su dibujo (ahí apunta el ratón)
+BOCA = (75, 35)                   # la boca de arriba de la regadera (por donde se llena)
+G_LUNA = 620.0                    # px/s²: el agua cae más despacio que en la Tierra
+GOTAS_S = 46                      # gotas por segundo al regar
+GASTO = 0.33                      # regadera por segundo (llena = 1)
+LLENA = 2.2                       # lo que se llena por segundo en la llave
+RIEGO = 2.0                       # cuánta agua le llega a la planta por cada regadera
+SED = 0.3                         # con menos agua que esto, la planta tiene sed y no crece
+BIEN = 0.5                        # con esto o más crece rápido y da fruto (si no, pide agua)
+AGUANTE = 4.5                     # segundos que aguanta sin nada de agua antes de secarse
+PASADA = 9.0                      # segundos que espera lista antes de pasarse
+REPLANTA = 2.2                    # segundos hasta que se siembra otra donde se secó una
+SECA = 0.046                      # agua que pierde por segundo (nivel 1)
+CALORES = ((14.0, 2), (28.0, 4))  # (cuándo, desde qué nivel)
+CALOR_DURA = 5.0
+DESP_CASTIGO = 0.25               # cada tanto de agua desperdiciada resta un poquito
+ESPECIES = {                      # segundos para crecer, puntos, sed (1 = normal)
+    "lechuga": (5.5, 24, 1.12),
+    "rabano": (5.0, 22, 0.92),
+    "tomate": (7.5, 36, 1.0),
+    "chile": (6.5, 32, 0.88),
+}
+INICIO = ("lechuga", "tomate", "rabano", "chile", "lechuga", "tomate")
+ABRE = (1, 1, 1, 1, 3, 5)         # desde qué nivel está abierta cada maceta
+DORADO = (250, 206, 72)
+FRUTO = 0.8                       # con poca agua crece hasta aquí, pero no da fruto
+RADIO_COSECHA = 54                # qué tan cerca de lo que brilla hay que tocar para cosechar
+
+
+def _nombre(especie):
+    return {"lechuga": t("mj.huerto.lechuga", "lechuga"), "rabano": t("mj.huerto.rabano", "rábano"),
+            "tomate": t("mj.huerto.tomate", "tomate"), "chile": t("mj.huerto.chile", "chile")}[especie]
+
+
+def _secar(col, seco):
+    """Del color sano al amarillo de la sed y al café de lo seco."""
+    if seco <= 0.6:
+        return mezclar(col, (206, 192, 74), seco / 0.6)
+    return mezclar((206, 192, 74), (118, 84, 48), (seco - 0.6) / 0.4)
+
+
+def _hoja(s, x, y, ang, largo, ancho, col, curva=0.0):
+    """Una hoja que sale de (x, y) hacia ang (0 = arriba, + = a la derecha) y se dobla según curva."""
+    if largo < 2:
+        return
+    pasos = 7
+    eje, angs = [(x, y)], [ang]
+    px, py = x, y
+    for i in range(1, pasos + 1):
+        a = ang + curva * i / pasos
+        px += math.sin(a) * largo / pasos
+        py -= math.cos(a) * largo / pasos
+        eje.append((px, py))
+        angs.append(a)
+    izq, der = [], []
+    for i, ((ex, ey), a) in enumerate(zip(eje, angs)):
+        w = ancho * math.sin(math.pi * i / pasos) ** 0.7
+        izq.append((ex - math.cos(a) * w, ey - math.sin(a) * w))
+        der.append((ex + math.cos(a) * w, ey + math.sin(a) * w))
+    pts = izq + der[::-1]
+    pygame.draw.polygon(s, col, pts)
+    pygame.draw.polygon(s, mezclar(col, (0, 0, 0), 0.38), pts, 1)
+    pygame.draw.lines(s, mezclar(col, (255, 255, 255), 0.32), False, eje[:-2], 1)
+
+
+def _aji(s, x, y, largo, col):
+    """Un chile que cuelga de (x, y), con su tallito verde."""
+    izq, der = [], []
+    for i in range(7):
+        u = i / 6
+        cx = x + math.sin(u * 1.6) * largo * 0.28
+        cy = y + u * largo
+        w = largo * 0.2 * (1 - u) ** 0.55 + 0.6
+        izq.append((cx - w, cy))
+        der.append((cx + w, cy))
+    pts = izq + der[::-1]
+    pygame.draw.polygon(s, col, pts)
+    pygame.draw.polygon(s, mezclar(col, (0, 0, 0), 0.35), pts, 1)
+    pygame.draw.line(s, mezclar(col, (255, 255, 255), 0.5), (x - 1, y + largo * 0.15), (x + largo * 0.05, y + largo * 0.55), 1)
+    pygame.draw.line(s, (60, 140, 60), (x, y - 4), (x, y + 1), 3)
+
+
+def _fruto(s, especie, x, y, esc=1.0, dorada=False):
+    """El fruto ya cosechado (para el panel de la cosecha y el que vuela)."""
+    x, y = int(x), int(y)
+    if especie == "lechuga":
+        for j in range(6):
+            a = -1.3 + 2.6 * j / 5
+            col = (178, 50, 86) if j % 2 else (104, 198, 88)
+            _hoja(s, x, y + 8 * esc, a, 17 * esc, 7 * esc, DORADO if dorada else col, a * 0.4)
+    elif especie == "rabano":
+        for a in (-0.5, 0, 0.5):
+            _hoja(s, x, y - 4 * esc, a, 14 * esc, 3.5 * esc, (70, 170, 76), a * 0.5)
+        col = DORADO if dorada else (206, 42, 74)
+        pygame.draw.circle(s, col, (x, y + 3 * esc), int(8 * esc))
+        pygame.draw.circle(s, mezclar(col, (255, 255, 255), 0.5), (x - 3 * esc, y), max(1, int(2 * esc)))
+        pygame.draw.line(s, (230, 220, 210), (x, y + 10 * esc), (x, y + 15 * esc), 1)
+    elif especie == "tomate":
+        col = DORADO if dorada else (228, 52, 40)
+        pygame.draw.circle(s, col, (x, y + 2 * esc), int(9 * esc))
+        pygame.draw.circle(s, mezclar(col, (255, 255, 255), 0.55), (x - 3 * esc, y - 2 * esc), max(1, int(2.5 * esc)))
+        estrella(s, x, y - 6 * esc, 4.5 * esc, (70, 150, 60))
+    else:
+        _aji(s, x, y - 8 * esc, 20 * esc, DORADO if dorada else (214, 34, 30))
+
+
+def _bolitas(w, h, semilla):
+    """El relleno de la maceta: bolitas de arcilla (como el Veggie) sobre un fondo oscuro."""
+    rng = random.Random(semilla)
+    s = pygame.Surface((w, h))
+    s.fill((36, 30, 30))
+    for _ in range(int(w * h / 46)):
+        x, y = rng.uniform(0, w), rng.uniform(4, h)
+        r = rng.uniform(3, 6)
+        c = rng.choice(((176, 100, 62), (150, 84, 54), (196, 120, 76), (128, 72, 48)))
+        pygame.draw.circle(s, mezclar(c, (0, 0, 0), 0.45), (x + 1, y + 1), r)
+        pygame.draw.circle(s, c, (x, y), r)
+        pygame.draw.circle(s, mezclar(c, (255, 255, 255), 0.35), (x - r * 0.35, y - r * 0.35), max(1, r * 0.3))
+    return s
+
+
+def _regadera(nivel):
+    """La regadera de pie (la flor del pico en PUNTA). nivel de 0 a 12: lo que se ve en la ventanita."""
+    def hacer():
+        s = pygame.Surface((150, 120), pygame.SRCALPHA)
+        verde, osc, claro = (62, 168, 110), (26, 88, 58), (138, 222, 168)
+        pygame.draw.arc(s, osc, (68, 10, 56, 60), -0.4, 2.8, 9)                       # el asa
+        pygame.draw.arc(s, verde, (71, 13, 50, 54), -0.35, 2.75, 4)
+        pico = [(54, 64), (54, 82), (18, 100), (9, 89)]
+        pygame.draw.polygon(s, verde, pico)
+        pygame.draw.polygon(s, osc, pico, 2)
+        pygame.draw.line(s, claro, (50, 68), (14, 90), 2)
+        cuerpo = pygame.Rect(46, 36, 66, 56)
+        pygame.draw.rect(s, osc, cuerpo.inflate(5, 5), border_radius=15)
+        pygame.draw.rect(s, verde, cuerpo, border_radius=12)
+        pygame.draw.rect(s, claro, (54, 42, 7, 44), border_radius=3)                 # el brillo
+        pygame.draw.line(s, osc, (47, 64), (111, 64), 2)                               # la costura
+        pygame.draw.ellipse(s, osc, (55, 27, 40, 15))                                  # la boca
+        pygame.draw.ellipse(s, (12, 36, 28), (59, 30, 32, 9))
+        v = pygame.Rect(94, 44, 11, 40)                                                # la ventanita del agua
+        pygame.draw.rect(s, (14, 22, 34), v, border_radius=4)
+        h = int(36 * nivel / 12)
+        if h:
+            pygame.draw.rect(s, (90, 180, 255), (v.x + 2, v.bottom - 2 - h, v.w - 4, h), border_radius=3)
+            pygame.draw.line(s, (200, 236, 255), (v.x + 3, v.bottom - 2 - h), (v.right - 4, v.bottom - 2 - h), 1)
+        pygame.draw.circle(s, (182, 192, 208), PUNTA, 9)                               # la flor con agujeritos
+        pygame.draw.circle(s, (96, 106, 128), PUNTA, 9, 2)
+        for dx, dy in ((-3, -3), (2, -4), (4, 1), (-1, 4), (0, 0), (-4, 1)):
+            pygame.draw.circle(s, (60, 70, 92), (PUNTA[0] + dx, PUNTA[1] + dy), 1)
+        return s
+    return guardado(("regadera", nivel), hacer)
+
+
+def _fondo(de_dia):
+    """Todo lo que no se mueve: el domo de vidrio con la Luna afuera, las luces LED, la mesa y el tanque."""
+    rng = random.Random(5)
+    s = pygame.Surface(ZONA.size)
+    ox, oy = ZONA.topleft
+    s.blit(degradado(ZONA.w, ZONA.h, (30, 40, 62), (12, 16, 28)), (0, 0))
+    for x in range(0, ZONA.w, 140):                                  # paneles de la pared
+        pygame.draw.line(s, (24, 32, 50), (x, 0), (x, ZONA.h), 2)
+    # el domo: lo que se ve afuera (cielo negro, estrellas, la Tierra, el Sol de día y el suelo de la Luna)
+    domo = pygame.Rect(222 - ox, 214 - oy, 990, 700)
+    vista = pygame.Surface(domo.size, pygame.SRCALPHA)
+    vista.fill((4, 6, 16, 255))
+    for _ in range(170):
+        b = rng.choice((90, 130, 170, 230))
+        vista.set_at((rng.randrange(domo.w), rng.randrange(domo.h // 2)), (b, b, min(255, b + 20), 255))
+    if de_dia:
+        sx, sy = int(domo.w * 0.2), int(domo.h * 0.13)
+        for rr, a in ((60, 30), (44, 60), (34, 120), (26, 255)):
+            pygame.draw.circle(vista, mezclar((4, 6, 16), (255, 238, 170), a / 255), (sx, sy), rr)
+    ex, ey, er = int(domo.w * 0.8), int(domo.h * 0.12), 25
+    pygame.draw.circle(vista, (20, 40, 80), (ex, ey), er + 4)
+    pygame.draw.circle(vista, (44, 112, 214), (ex, ey), er)
+    pygame.draw.ellipse(vista, (74, 168, 90), (ex - 16, ey - 12, 18, 14))
+    pygame.draw.ellipse(vista, (74, 168, 90), (ex + 2, ey + 2, 10, 15))
+    pygame.draw.arc(vista, (240, 245, 255), (ex - 20, ey - 22, 40, 26), 0.4, 2.4, 2)
+    pygame.draw.circle(vista, (10, 20, 50), (ex - 10, ey + 4), er - 4, draw_top_left=True, draw_bottom_left=True)
+    suelo = (118, 116, 124) if de_dia else (40, 42, 56)
+    lejos = mezclar(suelo, (4, 6, 16), 0.35)
+    base_y = 300                                                     # el horizonte, medido desde arriba del domo
+    pts = [(0, domo.h)] + [(x, base_y - 18 - 22 * math.sin(x * 0.011) - 10 * math.sin(x * 0.037))
+                           for x in range(0, domo.w + 20, 20)] + [(domo.w, domo.h)]
+    pygame.draw.polygon(vista, lejos, pts)
+    pts = [(0, domo.h)] + [(x, base_y + 10 + 8 * math.sin(x * 0.02 + 1)) for x in range(0, domo.w + 20, 20)] + [(domo.w, domo.h)]
+    pygame.draw.polygon(vista, suelo, pts)
+    for _ in range(14):
+        cx, cy, w = rng.uniform(0, domo.w), rng.uniform(base_y + 26, base_y + 80), rng.uniform(16, 50)
+        pygame.draw.ellipse(vista, mezclar(suelo, (0, 0, 0), 0.25), (cx - w / 2, cy, w, w * 0.25))
+        pygame.draw.arc(vista, mezclar(suelo, (255, 255, 255), 0.2), (cx - w / 2, cy, w, w * 0.25), math.pi, 2 * math.pi, 1)
+    mascara = pygame.Surface(domo.size, pygame.SRCALPHA)
+    pygame.draw.ellipse(mascara, (255, 255, 255, 255), mascara.get_rect())
+    vista.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    s.blit(vista, domo.topleft)
+    # los parales del domo
+    c = domo.center
+    for k in range(1, 8):
+        a = math.pi + k * math.pi / 8
+        p = (c[0] + math.cos(a) * domo.w / 2, c[1] + math.sin(a) * domo.h / 2)
+        pygame.draw.line(s, (70, 80, 104), c, p, 7)
+        pygame.draw.line(s, (138, 150, 176), c, p, 2)
+    interior = pygame.Rect(0, 0, int(domo.w * 0.62), int(domo.h * 0.62))
+    interior.center = c
+    pygame.draw.ellipse(s, (70, 80, 104), interior, 6)
+    pygame.draw.ellipse(s, (138, 150, 176), interior, 2)
+    pygame.draw.ellipse(s, (60, 68, 90), domo.inflate(16, 16), 10)
+    pygame.draw.ellipse(s, (150, 162, 188), domo, 3)
+    # el reflejo del vidrio
+    pygame.draw.arc(s, (60, 72, 100), domo.inflate(-60, -60), 1.9, 2.5, 3)
+    # las luces LED (rojas y azules: así crecen las plantas del Veggie) y su resplandor rosado
+    barra = pygame.Rect(276 - ox, 214 - oy, 888, 14)
+    for x in (barra.left + 30, barra.right - 30):
+        pygame.draw.line(s, (90, 98, 120), (x, 0), (x, barra.top), 2)
+    tinte = (60, 20, 70) if not de_dia else (38, 13, 44)
+    for x in range(barra.left + 74, barra.right - 40, 148):
+        b = brillo(170, tinte)
+        s.blit(b, (x - 170, barra.bottom - 40), special_flags=pygame.BLEND_ADD)
+    pygame.draw.rect(s, (36, 40, 54), barra.inflate(6, 6), border_radius=6)
+    pygame.draw.rect(s, (70, 76, 96), barra, border_radius=5)
+    for i, x in enumerate(range(barra.left + 10, barra.right - 6, 13)):
+        pygame.draw.rect(s, (255, 74, 112) if i % 3 else (120, 130, 255), (x, barra.bottom - 6, 6, 4))
+    # la mesa y el piso
+    mesa = pygame.Rect(236 - ox, MESA_Y - oy, 936, 12)
+    for x in (mesa.left + 24, mesa.centerx, mesa.right - 24):
+        pygame.draw.rect(s, (48, 54, 72), (x - 5, mesa.bottom, 10, PISO_Y - MESA_Y))
+    pygame.draw.rect(s, (24, 28, 40), (0, PISO_Y - oy, ZONA.w, ZONA.h))
+    for x in range(0, ZONA.w, 24):
+        pygame.draw.line(s, (34, 40, 56), (x, PISO_Y - oy), (x - 12, ZONA.h), 2)
+    pygame.draw.line(s, (60, 68, 90), (0, PISO_Y - oy), (ZONA.w, PISO_Y - oy), 2)
+    pygame.draw.rect(s, (66, 72, 94), (mesa.x, mesa.bottom, mesa.w, 8))
+    pygame.draw.rect(s, (130, 140, 166), mesa, border_radius=3)
+    pygame.draw.line(s, (190, 198, 220), (mesa.left + 4, mesa.top + 2), (mesa.right - 4, mesa.top + 2), 1)
+    # el tanque de agua reciclada con su tubo y su llave
+    tq = TANQUE.move(-ox, -oy)
+    g = (GRIFO[0] - ox, GRIFO[1] - oy)
+    tubo = [(tq.centerx, tq.top), (tq.centerx, 244 - oy), (g[0], 244 - oy), (g[0], g[1] - 8)]
+    pygame.draw.lines(s, (40, 46, 64), False, tubo, 18)
+    pygame.draw.lines(s, (104, 116, 146), False, tubo, 12)
+    pygame.draw.lines(s, (170, 182, 208), False, [(x - 2, y - 3) for x, y in tubo], 2)
+    pygame.draw.polygon(s, (150, 160, 184), [(g[0] - 9, g[1] - 10), (g[0] + 9, g[1] - 10), (g[0] + 6, g[1]), (g[0] - 6, g[1])])
+    llave = (g[0] - 46, 244 - oy)
+    pygame.draw.circle(s, (180, 40, 50), llave, 11, 4)
+    pygame.draw.line(s, (180, 40, 50), (llave[0] - 9, llave[1]), (llave[0] + 9, llave[1]), 3)
+    pygame.draw.line(s, (180, 40, 50), (llave[0], llave[1] - 9), (llave[0], llave[1] + 9), 3)
+    pygame.draw.rect(s, (30, 36, 52), tq.inflate(8, 8), border_radius=20)
+    pygame.draw.rect(s, (82, 96, 124), tq, border_radius=18)
+    pygame.draw.rect(s, (10, 16, 30), tq.inflate(-26, -66).move(0, 10), border_radius=10)
+    for yy in (tq.top + 14, tq.bottom - 14):
+        for xx in (tq.left + 12, tq.right - 12):
+            pygame.draw.circle(s, (160, 170, 194), (xx, yy), 3)
+    img = texto(t("mj.huerto.tanque", "AGUA RECICLADA"), 8, (190, 220, 255), sombra=False, pixel_=True)
+    s.blit(img, img.get_rect(midtop=(tq.centerx, tq.top + 10)))
+    return s
+
+
+class Huerto(Partida):
+    titulo = "Huerto: regá y cosechá"
+    instruccion = "Mantené apretado el clic para regar y tocá las plantas que estén listas"
+    tarea = "cosecha"
+    duracion = 40.0
+    META = 1900
+    ESCALA = 35
+    COLOR = (130, 226, 140)
+
+    def preparar(self):
+        self.titulo = t("mj.huerto.titulo", "Huerto: regá y cosechá")
+        self.instruccion = t("mj.huerto.instr", "Mantené apretado el clic para regar y tocá las plantas que estén listas")
+        self.consejos = (t("mj.huerto.c1", "La regadera se vacía: llenala poniéndola debajo de la llave del tanque."),
+                         t("mj.huerto.c2", "Cuando una planta brilla, tocala para cosecharla antes de que se pase."),
+                         t("mj.huerto.c3", "Si una planta se queda sin agua se marchita: ¡salvala a tiempo!"))
+        self.de_dia = True if self.base is None else self.base.de_dia()
+        self.plantas = []
+        for i, cx in enumerate(CENTROS):
+            p = {"i": i, "x": cx, "activa": ABRE[i] <= 1, "fase": self.rng.uniform(0, 6.3), "frutos": []}
+            self._sembrar(p, INICIO[i], self.rng.uniform(0.1, 0.4), self.rng.uniform(0.6, 0.95))
+            p["nace"] = 1.0
+            self.plantas.append(p)
+        self.plantas[self.rng.randrange(4)]["agua"] = 0.36          # una empieza con sed, para arrancar ya
+        self.lata = 1.0             # el agua de la regadera (llena = 1)
+        self.giro = 0.0             # lo inclinada que está (grados)
+        self.gotas = []             # [x, y, vx, vy, agua]
+        self._acum = 0.0
+        self.bloqueo = False        # después de cosechar, no riega hasta soltar el clic
+        self.llenando = False
+        self.regando = False
+        self.desp = 0.0             # agua desperdiciada
+        self._desp_marca = 0.0
+        self._aviso = {}            # para no repetir avisos muy seguido
+        self.calor = 0.0
+        self._calores = set()
+        self.vuelan = []            # [especie, dorada, x, y, k]
+        self.cuenta = {e: 0 for e in ESPECIES}
+        self.cosechas = 0
+        self.burbujas = [[self.rng.uniform(0, 1), self.rng.uniform(0, 1)] for _ in range(9)]
+
+    # ── las plantas ──────────────────────────────────────────────────────────────────
+    def _sembrar(self, p, especie=None, crece=0.0, agua=None):
+        if especie is None:
+            otras = [e for e in ESPECIES if e != p.get("especie")]
+            especie = self.rng.choice(otras)
+        dorada = (getattr(self, "nivel", 1) >= 2 and self.rng.random() < 0.12
+                  and not any(q.get("dorada") for q in getattr(self, "plantas", ())))
+        p.update(especie=especie, crece=crece, vis=crece, sed_t=0.0, lista_t=0.0, muerta_t=None, ok_t=0.0,
+                 cal_t=0.0, casi=False, peligro=False, nace=0.0, dorada=dorada, salta=0.0, rebalsa=0.0)
+        if agua is not None:
+            p["agua"] = agua
+        else:
+            p["agua"] = max(p.get("agua", 0.7), 0.7)
+
+    def alto(self, p):
+        """La altura de la planta sobre la maceta (también para dónde se toca para cosechar)."""
+        g, e = p["crece"], p["especie"]
+        return {"lechuga": 14 + 60 * g, "rabano": 22 + 60 * g, "tomate": 22 + 170 * g, "chile": 20 + 140 * g}[e]
+
+    def punto(self, p):
+        """El centro de lo que se cosecha (ahí brilla): un clic cerca lo cosecha."""
+        if p["especie"] == "rabano":
+            return p["x"], SUELO - 22
+        return p["x"], SUELO - self.alto(p) * (0.45 if p["especie"] == "lechuga" else 0.55)
+
+    def etiqueta(self, p):
+        """El cartelito «¡Lista!» sobre la planta (también se puede tocar)."""
+        return pygame.Rect(p["x"] - 44, SUELO - self.alto(p) - 60, 88, 34)
+
+    def toca(self, p, c):
+        x, y = self.punto(p)
+        return math.hypot(c[0] - x, c[1] - y) <= RADIO_COSECHA or self.etiqueta(p).collidepoint(c)
+
+    def lista(self, p):
+        return p["activa"] and p["muerta_t"] is None and p["crece"] >= 1.0
+
+    def _seco(self, p):
+        if p["muerta_t"] is not None:
+            return 1.0
+        if p["agua"] <= 0:
+            return 0.6 + 0.4 * min(1.0, p["sed_t"] / AGUANTE)
+        if p["agua"] < SED:
+            return 0.6 * (SED - p["agua"]) / SED
+        return 0.0
+
+    def ritmo(self, p):
+        return SECA * ESPECIES[p["especie"]][2] * (1 + 0.13 * (self.nv - 1)) * (1.8 if self.calor > 0 else 1.0)
+
+    def _avisar(self, clave, x, y, s, color, tam=20, cada=1.6):
+        if self.t - self._aviso.get(clave, -9) >= cada:
+            self._aviso[clave] = self.t
+            self.fx.texto(x, y, s, color, tam, 0.9, 40)
+
+    # ── la lógica ────────────────────────────────────────────────────────────────────
+    def jugar(self, dt):
+        # se abren macetas al subir de nivel
+        for p in self.plantas:
+            if not p["activa"] and self.nv >= ABRE[p["i"]]:
+                p["activa"] = True
+                self._sembrar(p, None, 0.0, 0.8)
+                self.fx.texto(p["x"], SUELO - 60, t("mj.huerto.nueva", "¡Maceta nueva!"), COLORES["cian"], 22)
+                self.fx.anillo(p["x"], SUELO + 30, COLORES["cian"], 90, 0.5)
+                sonido.play("clac", 0.8)
+        # el calor en el domo
+        for i, (cuando, desde) in enumerate(CALORES):
+            if i not in self._calores and self.tj >= cuando and self.nv >= desde:
+                self._calores.add(i)
+                self.calor = CALOR_DURA
+                self.fx.cartel(t("mj.huerto.calor", "¡Calor en el domo! Las plantas toman más agua"), COLORES["naranja"],
+                               22, 1.8, self.Y_CARTEL + 66)           # debajo de «¡NIVEL n!» si coinciden
+                sonido.play("alerta", 0.7)
+        self.calor = max(0.0, self.calor - dt)
+        # cosechar: un clic sobre una planta lista
+        for c in self.clics:
+            for p in self.plantas:
+                if self.lista(p) and self.toca(p, c):
+                    self._cosechar(p)
+                    self.bloqueo = True
+                    break
+        if not self.apretado:
+            self.bloqueo = False
+        # llenar la regadera en la llave, o regar
+        self.llenando = self._en_grifo() and self.lata < 1.0
+        if self.llenando:
+            antes = self.lata
+            self.lata = min(1.0, self.lata + LLENA * dt)
+            if antes < 1.0 <= self.lata:
+                sonido.play("tanque", 0.6)
+                self.fx.texto(self.raton[0] + 66, self.raton[1] - 90, t("mj.huerto.llena_reg", "¡Llena!"), COLORES["cian"], 20)
+        self.regando = self.apretado and not self.bloqueo and not self._en_grifo() and self.lata > 0
+        if self.apretado and not self.bloqueo and self.lata <= 0 and not self._en_grifo():
+            self._avisar("vacia", self.raton[0] + 60, self.raton[1] - 100,
+                         t("mj.huerto.vacia", "¡Regadera vacía! Llenala en la llave"), COLORES["naranja"], 20, 2.2)
+        if self.regando:
+            self._acum += GOTAS_S * dt
+            while self._acum >= 1 and self.lata > 0:
+                self._acum -= 1
+                agua = min(self.lata, GASTO / GOTAS_S)
+                self.lata -= agua
+                mx, my = self.raton
+                self.gotas.append([mx + self.rng.uniform(-6, 6), my + self.rng.uniform(-2, 4),
+                                   self.rng.uniform(-55, 5), self.rng.uniform(40, 90), agua])
+            if self.lata <= 1e-6:
+                self.lata = 0.0
+        # las plantas
+        for p in self.plantas:
+            if p["activa"]:
+                self._crecer(p, dt)
+
+    def _crecer(self, p, dt):
+        if p["muerta_t"] is not None:
+            p["muerta_t"] += dt
+            if p["muerta_t"] >= REPLANTA:
+                self._sembrar(p, None, 0.0, 0.7)
+                self.fx.chispas(p["x"], SUELO - 6, (140, 230, 140), 10, (40, 140), (0.3, 0.6), grav=200)
+                sonido.play("soltar", 0.5)
+            return
+        p["agua"] = max(0.0, p["agua"] - self.ritmo(p) * dt)
+        p["rebalsa"] = max(0.0, p["rebalsa"] - dt)
+        if p["agua"] <= 0:
+            p["sed_t"] += dt
+            p["casi"] = p["peligro"] = True
+            if p["sed_t"] >= AGUANTE:
+                self._morir(p)
+                return
+        else:
+            p["sed_t"] = max(0.0, p["sed_t"] - 2 * dt)
+            if p["agua"] < 0.12:
+                p["peligro"] = True
+        if p["peligro"] and p["agua"] >= 0.6:                      # la salvaron
+            frase = t("mj.huerto.rescate", "¡Al rescate!") if p["casi"] else t("mj.huerto.salvada", "¡Salvada!")
+            self.ganar(10 if p["casi"] else 6, p["x"], SUELO - self.alto(p) - 20, frase, COLORES["cian"], subir=0.15)
+            p["peligro"] = p["casi"] = False
+            p["salta"] = 0.4
+        if p["crece"] < 1.0:
+            p["cal_t"] += dt
+            if p["agua"] >= SED:
+                bien = p["agua"] >= BIEN
+                p["ok_t"] += dt if bien else 0.0
+                tope = 1.0 if bien else FRUTO               # para dar fruto necesita bastante agua
+                if p["crece"] < tope:
+                    p["crece"] = min(tope, p["crece"] + (1.0 if bien else 0.7) * dt / ESPECIES[p["especie"]][0])
+                if p["crece"] >= 1.0:
+                    p["lista_t"] = 0.0
+                    sonido.play("bien", 0.5)
+                    self.fx.anillo(*self.punto(p), DORADO, 70, 0.45, 3)
+        else:
+            p["lista_t"] += dt
+            if p["lista_t"] >= PASADA:                              # se pasó: se cae y vuelve a crecer
+                self.perder(p["x"], SUELO - self.alto(p) - 10, t("mj.huerto.paso", "¡Se pasó!"), castigo=5, bajar=0.3,
+                            son="fallo")
+                self.fx.chispas(p["x"], SUELO - self.alto(p) * 0.5, (150, 100, 60), 14, (40, 160), (0.4, 0.8),
+                                grav=500, con_brillo=False)
+                p["crece"] = p["vis"] = 0.45
+                p["lista_t"] = 0.0
+                p["ok_t"] = p["cal_t"] = 0.0
+
+    def _morir(self, p):
+        p["muerta_t"] = 0.0
+        self.perder(p["x"], SUELO - self.alto(p) - 10, t("mj.huerto.seco", "¡Se secó!"), castigo=15, bajar=0.7)
+        self.fx.chispas(p["x"], SUELO - 30, (150, 110, 60), 18, (40, 180), (0.4, 0.9), grav=400, con_brillo=False)
+        self.fx.sacudir(4, 0.2)
+
+    def _cosechar(self, p):
+        base = ESPECIES[p["especie"]][1]
+        calidad = p["ok_t"] / p["cal_t"] if p["cal_t"] > 0 else 1.0
+        pts = base * (0.6 + 0.4 * calidad) * (2 if p["dorada"] else 1)
+        if p["dorada"]:
+            frase = t("mj.huerto.dorada", "¡Dorada! Vale doble")
+        elif calidad >= 0.85:
+            frase = t("mj.huerto.perfecta", "¡Perfecta!")
+        else:
+            frase = t("mj.huerto.cosecha", "¡Cosecha!")
+        y = self.punto(p)[1]
+        self.ganar(pts, p["x"], y - 30, frase, DORADO if p["dorada"] else COLORES["verde"], subir=0.25)
+        if calidad >= 0.85 or p["dorada"]:
+            sonido.play("perfecto", 0.6)
+        self.fx.chispas(p["x"], y, DORADO if p["dorada"] else (160, 255, 150), 22, (90, 260), (0.3, 0.7))
+        self.fx.anillo(p["x"], y, (200, 255, 200), 80, 0.4)
+        for fx_, fy_ in (p["frutos"] or [(p["x"], y)])[:3]:
+            self.vuelan.append([p["especie"], p["dorada"], fx_, fy_, 0.0])
+        self.cosechas += 1
+        self._sembrar(p, None, 0.0, p["agua"])
+
+    def _boca(self):
+        return self.raton[0] + BOCA[0] - PUNTA[0], self.raton[1] + BOCA[1] - PUNTA[1]
+
+    def _en_grifo(self):
+        bx, by = self._boca()
+        return abs(bx - GRIFO[0]) < 46 and GRIFO[1] + 4 < by < GRIFO[1] + 210
+
+    def pos_llenar(self):
+        """Dónde poner el ratón para llenar la regadera (para los jugadores de prueba)."""
+        return GRIFO[0] - (BOCA[0] - PUNTA[0]), GRIFO[1] + 80 - (BOCA[1] - PUNTA[1])
+
+    # ── lo que se mueve siempre ──────────────────────────────────────────────────────
+    def animar(self, dt):
+        self.giro += ((32.0 if self.regando and self.jugando() else 0.0) - self.giro) * min(1.0, 14 * dt)
+        if not self.jugando():
+            self.regando = self.llenando = False
+        for p in self.plantas:
+            p["vis"] += (p["crece"] - p["vis"]) * min(1.0, 5 * dt)
+            p["nace"] = min(1.0, p["nace"] + dt)
+            p["salta"] = max(0.0, p["salta"] - dt)
+        # las gotas: caen despacito (gravedad de la Luna) y riegan donde caen
+        vivas = []
+        for d in self.gotas:
+            d[3] += G_LUNA * dt
+            d[0] += d[2] * dt
+            d[1] += d[3] * dt
+            if not self._caer(d):
+                vivas.append(d)
+        self.gotas = vivas
+        # los frutos que vuelan al panel
+        quedan = []
+        for v in self.vuelan:
+            v[4] += dt / 0.75
+            if v[4] >= 1.0:
+                self.cuenta[v[0]] += 1
+                x, y = self._icono_xy(v[0])
+                self.fx.chispas(x, y, DORADO, 6, (40, 120), (0.2, 0.4))
+            else:
+                quedan.append(v)
+        self.vuelan = quedan
+        self.bucle("burbujas", (0.5 if self.llenando else 0.0) + (0.3 if self.regando else 0.0))
+        if self.desp - self._desp_marca >= DESP_CASTIGO and self.jugando():
+            self._desp_marca = self.desp
+            quita = min(self.puntos, 4)
+            self.puntos -= quita
+            self.combo = 0                                         # desperdiciar agua corta la racha
+            self.bajar(0.08)
+            self._avisar("desp", self.raton[0], self.raton[1] + 40,
+                         t("mj.huerto.desp", "agua desperdiciada") + (f"  −{quita}" if quita else ""), (150, 190, 230), 17)
+
+    def _caer(self, d):
+        """¿Ya cayó la gota? Si cae en una maceta la riega; si no, se desperdicia."""
+        x, y, agua = d[0], d[1], d[4]
+        if y >= SUELO:
+            for p in self.plantas:
+                if abs(x - p["x"]) <= MACETA[0] / 2 - 4 and y <= MESA_Y:
+                    self._salpicar(x, SUELO, 2)
+                    if not self.jugando():
+                        return True
+                    if not p["activa"] or p["muerta_t"] is not None:
+                        self.desp += agua
+                    elif p["agua"] >= 1.0:                          # rebalsa
+                        self.desp += agua
+                        p["rebalsa"] = 0.4
+                        lado = 1 if x > p["x"] else -1
+                        self.fx.chispas(p["x"] + lado * (MACETA[0] / 2 + 2), SUELO, (120, 190, 255), 2, (30, 90),
+                                        (0.3, 0.6), grav=500, tam=(1, 3), con_brillo=False,
+                                        angulo=math.pi / 2 - lado * 1.0, abre=0.4)
+                        self._avisar(("llena", p["i"]), p["x"], SUELO - 30, t("mj.huerto.llena", "¡Ya está llena!"),
+                                     (150, 210, 255), 18, 1.8)
+                    else:
+                        if p["agua"] < SED and p["muerta_t"] is None:
+                            p["salta"] = max(p["salta"], 0.25)
+                        p["agua"] = min(1.0, p["agua"] + agua * RIEGO)
+                    return True
+        if (y >= MESA_Y and 236 <= x <= 1172) or y >= PISO_Y:
+            self._salpicar(x, MESA_Y if y < PISO_Y else PISO_Y, 3)
+            if self.jugando():
+                self.desp += agua
+            return True
+        return y > ZONA.bottom + 20
+
+    def _salpicar(self, x, y, cuantas):
+        self.fx.chispas(x, y, (130, 196, 255), cuantas, (30, 100), (0.15, 0.35), grav=500, tam=(1, 2),
+                        con_brillo=False, angulo=-math.pi / 2, abre=1.2)
+
+    # ── dibujo ───────────────────────────────────────────────────────────────────────
+    def escena(self, lienzo):
+        g = COLORES
+        lienzo.blit(guardado(("huerto_fondo", self.de_dia), lambda: _fondo(self.de_dia)), ZONA.topleft)
+        self._tanque(lienzo)
+        for p in self.plantas:
+            self._maceta(lienzo, p)
+        for p in self.plantas:
+            if p["activa"]:
+                self._planta(lienzo, p)
+        for p in self.plantas:
+            if p["activa"]:
+                self._globo(lienzo, p)
+        for d in self.gotas:
+            x, y = int(d[0]), int(d[1])
+            pygame.draw.line(lienzo, (70, 140, 230), (x, y), (int(x - d[2] * 0.02), int(y - d[3] * 0.025)), 2)
+            pygame.draw.circle(lienzo, (110, 184, 255), (x, y), 3)
+            pygame.draw.circle(lienzo, (225, 244, 255), (x - 1, y - 1), 1)
+        if self.calor > 0:
+            v = vineta((255, 120, 30)).copy()
+            v.set_alpha(int(90 + 50 * math.sin(self.t * 6)))
+            lienzo.blit(v, ZONA.topleft)
+            self._termometro(lienzo, 1186, 300)
+        self._panel(lienzo)
+        for especie, dorada, x0, y0, k in self.vuelan:
+            x1, y1 = self._icono_xy(especie)
+            e = 1 - (1 - k) ** 2
+            x = x0 + (x1 - x0) * e
+            y = y0 + (y1 - y0) * e - 120 * math.sin(math.pi * k)
+            _fruto(lienzo, especie, x, y, 1.4 - 0.5 * k, dorada)
+        if self.jugando():
+            self._ayuda(lienzo)
+            self._regadera(lienzo)
+        lienzo.blit(translucido(ZONA.w - 8, 30, (6, 8, 20), 175, 0), (ZONA.left + 4, ZONA.bottom - 34))
+        img = texto(t("mj.huerto.nota", "En 2015 los astronautas se comieron lechuga cultivada en la Estación Espacial "
+                                        "(Veggie, NASA). Allá el agua se recicla."), 17, g["gris"], False, sombra=False)
+        lienzo.blit(img, (ZONA.left + 20, ZONA.bottom - 28))
+
+    def _tanque(self, lienzo):
+        v = TANQUE.inflate(-26, -66).move(0, 10)
+        nivel = v.bottom - int(v.h * 0.8)
+        agua = pygame.Rect(v.x + 2, nivel, v.w - 4, v.bottom - nivel - 2)
+        pygame.draw.rect(lienzo, (34, 100, 190), agua, border_radius=8)
+        pygame.draw.rect(lienzo, (60, 140, 230), agua.inflate(-14, -6).move(-3, 0), border_radius=6)
+        ola = [(x, nivel + 2 * math.sin(self.t * 3 + x * 0.12)) for x in range(agua.left, agua.right + 1, 4)]
+        if len(ola) > 1:
+            pygame.draw.lines(lienzo, (170, 220, 255), False, ola, 2)
+        for b in self.burbujas:
+            b[1] = (b[1] + self.dt * (0.25 + 0.2 * b[0])) % 1.0
+            x = agua.left + 6 + b[0] * (agua.w - 12) + 2 * math.sin(self.t * 4 + b[0] * 9)
+            y = agua.bottom - 4 - b[1] * (agua.h - 8)
+            pygame.draw.circle(lienzo, (170, 220, 255), (int(x), int(y)), 2 + int(b[0] * 2), 1)
+        img = texto(t("mj.huerto.recicla", "98 % reciclada"), 13, (150, 200, 240), negrita=False, sombra=False)
+        lienzo.blit(img, img.get_rect(midbottom=(TANQUE.centerx, TANQUE.bottom - 8)))
+        if self.llenando:                                         # el chorro de la llave a la regadera
+            bx, by = self._boca()
+            for k in range(3):
+                x = GRIFO[0] + (bx - GRIFO[0]) * 0.5 + math.sin(self.t * 30 + k) * 1.5
+                pygame.draw.line(lienzo, (90, 170, 250), (GRIFO[0] - 2 + k * 2, GRIFO[1]), (x - 2 + k * 2, by), 2)
+            for k in range(4):
+                u = (self.t * 3 + k / 4) % 1.0
+                yy = GRIFO[1] + (by - GRIFO[1]) * u
+                pygame.draw.circle(lienzo, (210, 236, 255), (GRIFO[0] + int(math.sin(k * 7) * 2), int(yy)), 2)
+
+    def _maceta(self, lienzo, p):
+        w, h = MACETA
+        r = pygame.Rect(p["x"] - w // 2, SUELO, w, h)
+        lienzo.blit(guardado(("huerto_bolitas", p["i"]), lambda: _bolitas(w - 8, h - 8, p["i"] + 11)), (r.x + 4, r.y + 4))
+        if p["activa"]:
+            a = min(1.0, p["agua"]) if p["muerta_t"] is None else 0.0
+            hh = int((h - 8) * a) // 2 * 2
+            if hh > 0:
+                lienzo.blit(translucido(w - 8, hh, (40, 120, 230), 130, 4), (r.x + 4, r.bottom - 4 - hh))
+                col = (200, 240, 255) if p["rebalsa"] > 0 else (130, 200, 255)
+                pygame.draw.line(lienzo, col, (r.x + 6, r.bottom - 4 - hh), (r.right - 7, r.bottom - 4 - hh), 2)
+            ym = r.bottom - 4 - int((h - 8) * BIEN)                # la marca de «agua suficiente»
+            ok = a >= BIEN
+            col = (120, 230, 140) if ok else (240, 240, 250)
+            pygame.draw.polygon(lienzo, col, [(r.right + 1, ym), (r.right + 9, ym - 5), (r.right + 9, ym + 5)])
+            for xx in range(r.x + 22, r.right - 8, 10):
+                pygame.draw.line(lienzo, mezclar((30, 40, 60), col, 0.6), (xx, ym), (xx + 4, ym), 1)
+            if p["muerta_t"] is None and p["vis"] > 0.12:            # raíces
+                for k, dx in enumerate((-12, 0, 12)):
+                    largo = min(h - 14, 10 + 46 * p["vis"])
+                    pts = [(p["x"] + dx + 4 * math.sin(j * 1.3 + k), SUELO + 4 + largo * j / 5) for j in range(6)]
+                    pygame.draw.lines(lienzo, (236, 230, 210), False, pts, 1)
+        else:
+            lienzo.blit(translucido(w - 8, h - 8, (8, 10, 20), 150, 4), (r.x + 4, r.y + 4))
+        pygame.draw.rect(lienzo, (150, 192, 218), r, 2, border_radius=6)                 # el vidrio
+        pygame.draw.line(lienzo, (220, 240, 255), (r.x + 9, r.y + 10), (r.x + 9, r.bottom - 10), 2)
+        pygame.draw.line(lienzo, (160, 200, 228), (r.x + 15, r.y + 10), (r.x + 15, r.y + 30), 1)
+        pygame.draw.rect(lienzo, (34, 40, 56), (r.x - 5, r.y - 5, w + 10, 9), border_radius=4)  # el borde
+        pygame.draw.rect(lienzo, (110, 126, 156), (r.x - 4, r.y - 4, w + 8, 7), border_radius=4)
+        if p["activa"]:
+            img = texto(_nombre(p["especie"]), 13, (230, 236, 250), negrita=True, sombra=False)
+            et = img.get_rect(midbottom=(p["x"], r.bottom - 5))
+            lienzo.blit(translucido(et.w + 12, et.h + 2, (10, 14, 26), 190, 6), et.inflate(12, 2))
+            lienzo.blit(img, et)
+        else:
+            img = texto(t("mj.huerto.abre", "nivel {n}", n=ABRE[p["i"]]), 8, (150, 160, 190), sombra=False, pixel_=True)
+            lienzo.blit(img, img.get_rect(center=r.center))
+
+    def _planta(self, s, p):
+        muerta = p["muerta_t"] is not None
+        seco = self._seco(p)
+        g = max(0.04, p["vis"])
+        e = 0.4 + 0.6 * min(1.0, p["nace"] / 0.4)
+        if p["nace"] < 0.55:                                     # «pop» al nacer
+            e *= 1 + 0.25 * math.sin(math.pi * min(1.0, p["nace"] / 0.55))
+        if muerta:
+            e *= max(0.0, 1 - max(0.0, p["muerta_t"] - REPLANTA + 0.6) / 0.6)
+            if e <= 0.02:
+                return
+        temblor = math.sin(self.t * 38) * 2.2 if (p["agua"] <= 0 and not muerta) else 0.0
+        x = p["x"] + temblor
+        sw = math.sin(self.t * 1.7 + p["fase"]) * (0.05 + 0.04 * g) * (1 - seco)
+        sw += math.sin(p["salta"] * 22) * p["salta"] * 0.5
+        lista = self.lista(p)
+        p["frutos"] = []
+        if lista:
+            pulso = 0.5 + 0.5 * math.sin(self.t * 5 + p["fase"])
+            luz(s, x, self.punto(p)[1], 90 + 20 * pulso, DORADO if p["dorada"] else (170, 255, 150), 0.3 + 0.2 * pulso)
+        elif p["dorada"] and not muerta:
+            luz(s, x, SUELO - self.alto(p) * 0.5, 70, DORADO, 0.18)
+        getattr(self, "_p_" + p["especie"])(s, p, x, SUELO - 1, g, e, sw, seco)
+        if lista or (p["dorada"] and not muerta):
+            for k in range(3):                                    # destellos
+                u = (self.t * 0.9 + k / 3 + p["fase"]) % 1.0
+                a = p["fase"] + k * 2.1
+                cx = x + math.cos(a) * 40
+                cy = SUELO - self.alto(p) * (0.2 + 0.7 * u)
+                estrella(s, cx, cy, 5 * math.sin(math.pi * u), DORADO if p["dorada"] else (230, 255, 210))
+
+    def _fruto_col(self, p, verde, maduro, m):
+        """Verde mientras crece; al madurar pasa por anaranjado hasta el rojo (sin el café de la mezcla)."""
+        if p["dorada"]:
+            return DORADO
+        if m < 0.55:
+            return verde
+        if m < 0.8:
+            return mezclar(verde, (244, 160, 44), (m - 0.55) / 0.25)
+        return mezclar((244, 160, 44), maduro, (m - 0.8) / 0.2)
+
+    def _p_lechuga(self, s, p, x, y, g, e, sw, seco):
+        largo = (14 + 60 * g) * e
+        n_ = 4 + int(5 * g)
+        angs = sorted((-1.25 + 2.5 * j / (n_ - 1) for j in range(n_)), key=lambda a: -abs(a))
+        for j, a in enumerate(angs):
+            l = largo * (0.7 + 0.3 * (1 - abs(a) / 1.25))
+            roja = j % 2 == 1
+            base = (178, 50, 86) if roja else (104, 198, 88)          # romana roja, como la del Veggie
+            if p["dorada"] and roja:
+                base = mezclar(base, DORADO, 0.7)
+            lado = 1 if a >= 0 else -1
+            _hoja(s, x, y, a * (1 + 0.5 * seco) + sw, l, l * 0.42, _secar(base, seco), a * 0.45 + lado * seco * 1.5)
+        p["frutos"] = [(x, y - largo * 0.5)]
+
+    def _p_rabano(self, s, p, x, y, g, e, sw, seco):
+        rb = (2 + 13 * g) * e
+        largo = (14 + 50 * g) * e
+        n_ = 3 + int(2 * g)
+        for j in range(n_):
+            a = -0.65 + 1.3 * j / (n_ - 1)
+            lado = 1 if a >= 0 else -1
+            bx, by = x + a * rb * 0.4, y - rb * 0.7
+            pygame.draw.line(s, _secar((176, 60, 80), seco * 0.8), (x, y - rb * 0.5), (bx, by), 2)
+            _hoja(s, bx, by, a * (1 + 0.6 * seco) + sw, largo * (0.85 + 0.15 * (1 - abs(a))), largo * 0.21,
+                  _secar((70, 170, 76), seco), a * 0.6 + lado * seco * 1.6)
+        col = self._fruto_col(p, (206, 42, 74), (206, 42, 74), 1) if not seco else mezclar((206, 42, 74), (120, 80, 60), seco)
+        pygame.draw.circle(s, col, (int(x), int(y)), int(rb), draw_top_left=True, draw_top_right=True)
+        pygame.draw.circle(s, mezclar(col, (255, 255, 255), 0.45), (int(x - rb * 0.35), int(y - rb * 0.5)), max(1, int(rb * 0.25)))
+        p["frutos"] = [(x, y - rb * 0.5)]
+
+    def _p_tomate(self, s, p, x, y, g, e, sw, seco):
+        h = (22 + 170 * g) * e
+        tallo = _secar((70, 150, 62), seco)
+        if g > 0.2:                                              # la vara que lo sostiene
+            tope = y - min(h + 18, 200)
+            pygame.draw.line(s, (156, 116, 66), (x + 18, y + 2), (x + 18, tope), 3)
+            for k in range(1, 4):
+                yy = y - h * k / 4
+                if yy > tope:
+                    pygame.draw.line(s, (210, 200, 160), (x + 12, yy), (x + 20, yy - 3), 2)
+        pts = []
+        for i in range(9):
+            u = i / 8
+            pts.append((x + sw * u * h * 0.5 + seco * u * u * h * 0.35, y - h * u * (1 - 0.25 * seco)))
+        pygame.draw.lines(s, tallo, False, pts, max(2, int(3 + 2 * g)))
+        for i in range(2, 9):
+            u = i / 8
+            if u > 0.3 + g:
+                break
+            lado = 1 if i % 2 else -1
+            l = (12 + 22 * min(1.0, g * 1.4)) * e * (1.15 - 0.4 * u)
+            a = lado * (1.05 + 0.6 * seco) + sw
+            _hoja(s, pts[i][0], pts[i][1], a, l, l * 0.38, _secar((80, 168, 70), seco), lado * (0.4 + 1.2 * seco))
+            _hoja(s, pts[i][0] + math.sin(a) * l * 0.5, pts[i][1] - math.cos(a) * l * 0.5, a - lado * 0.7, l * 0.5,
+                  l * 0.2, _secar((80, 168, 70), seco), lado * 0.3)
+        if 0.45 <= g < 0.8 and not seco:                           # flores amarillas
+            for i, lado in ((5, -1), (7, 1)):
+                estrella(s, pts[i][0] + lado * 12, pts[i][1] + 4, 5, (250, 220, 60), (200, 160, 30))
+        if g >= 0.6:
+            m = min(1.0, (g - 0.6) / 0.4)
+            r = (4 + 7 * m) * e
+            col = self._fruto_col(p, (120, 190, 70), (228, 52, 40), m)
+            col = mezclar(col, (110, 80, 50), max(0.0, seco - 0.3))
+            for i, lado in ((4, -1), (6, 1), (7, -1)):
+                fx_, fy_ = pts[i][0] + lado * 16, pts[i][1] + 12 + 6 * seco
+                pygame.draw.line(s, tallo, pts[i], (fx_, fy_ - r), 2)
+                pygame.draw.circle(s, col, (int(fx_), int(fy_)), int(r))
+                pygame.draw.circle(s, mezclar(col, (255, 255, 255), 0.5), (int(fx_ - r * 0.35), int(fy_ - r * 0.35)), max(1, int(r * 0.28)))
+                estrella(s, fx_, fy_ - r + 1, max(2.0, r * 0.5), (70, 150, 60))
+                p["frutos"].append((fx_, fy_))
+
+    def _p_chile(self, s, p, x, y, g, e, sw, seco):
+        h = (20 + 128 * g) * e
+        tallo = _secar((64, 140, 56), seco)
+        hoja = _secar((46, 150, 72), seco)
+        pts = []
+        for i in range(7):
+            u = i / 6
+            pts.append((x + sw * u * h * 0.45 + seco * u * u * h * 0.3, y - h * u * (1 - 0.25 * seco)))
+        pygame.draw.lines(s, tallo, False, pts, max(2, int(3 + 2 * g)))
+        puntas = [pts[-1]]
+        if g > 0.3:
+            for lado in (-1, 1):
+                a = lado * (0.75 + 0.5 * seco) + sw
+                l = h * 0.45
+                q = (pts[3][0] + math.sin(a) * l, pts[3][1] - math.cos(a) * l)
+                pygame.draw.line(s, tallo, pts[3], q, max(2, int(2 + g)))
+                puntas.append(q)
+                for k in (0.5, 1.0):
+                    bx = pts[3][0] + math.sin(a) * l * k
+                    by = pts[3][1] - math.cos(a) * l * k
+                    _hoja(s, bx, by, a + lado * 0.6, 14 * e * (0.6 + 0.5 * g), 5 * e, hoja, lado * (0.3 + 1.0 * seco))
+        for i in range(2, 7):
+            if i / 6 > 0.3 + g:
+                break
+            lado = 1 if i % 2 else -1
+            l = (10 + 12 * g) * e
+            _hoja(s, pts[i][0], pts[i][1], lado * (1.0 + 0.6 * seco) + sw, l, l * 0.36, hoja, lado * (0.3 + 1.2 * seco))
+        _hoja(s, pts[-1][0], pts[-1][1], sw, (8 + 8 * g) * e, 4 * e, hoja, 0)
+        if g >= 0.55:
+            m = min(1.0, (g - 0.55) / 0.45)
+            col = self._fruto_col(p, (70, 170, 60), (216, 34, 30), m)
+            col = mezclar(col, (110, 80, 50), max(0.0, seco - 0.3))
+            largo = (6 + 18 * m) * e
+            for q in puntas[1:] + [pts[4]]:
+                _aji(s, q[0], q[1] + 6, largo, col)
+                p["frutos"].append((q[0], q[1] + 6 + largo / 2))
+
+    def _globo(self, s, p):
+        """Sobre la planta: pide agua (gota), se marchita (¡!) o está lista (con lo que le falta para pasarse)."""
+        if p["muerta_t"] is not None:
+            return
+        tope = SUELO - self.alto(p)
+        if self.lista(p):
+            brinco = abs(math.sin(self.t * 5 + p["fase"])) * 8
+            img = texto(t("mj.huerto.lista", "¡Lista!"), 16, (40, 30, 10), sombra=False)
+            r = img.get_rect(center=(p["x"], int(tope - 34 - brinco)))
+            caja = r.inflate(18, 8)
+            pygame.draw.rect(s, DORADO, caja, border_radius=10)
+            pygame.draw.rect(s, (255, 244, 200), caja, 2, border_radius=10)
+            s.blit(img, r)
+            falta = 1 - p["lista_t"] / PASADA
+            if falta < 0.999:
+                c = (caja.right + 12, caja.centery)
+                pygame.draw.circle(s, (40, 40, 60), c, 9)
+                pygame.draw.arc(s, (255, 120, 80) if falta < 0.35 else (140, 230, 140), (c[0] - 9, c[1] - 9, 18, 18),
+                                math.pi / 2, math.pi / 2 + 2 * math.pi * falta, 4)
+            return
+        if p["agua"] >= BIEN:
+            return
+        x, y = p["x"] + 30, int(tope - 18)
+        marchita = p["agua"] <= 0
+        if p["agua"] >= SED:                                     # quiere agua para dar fruto: globo quieto
+            parpadeo = 1.0
+        else:
+            parpadeo = 0.5 + 0.5 * math.sin(self.t * (14 if marchita else 6 + 10 * (1 - p["agua"] / SED)))
+        caja = pygame.Rect(0, 0, 38, 32)
+        caja.midbottom = (x, y)
+        fondo = mezclar((255, 90, 90), (255, 160, 160), parpadeo) if marchita else (245, 250, 255)
+        pygame.draw.polygon(s, fondo, [(caja.left + 8, caja.bottom - 4), (caja.left + 18, caja.bottom - 4),
+                                       (caja.left + 4, caja.bottom + 9)])
+        pygame.draw.rect(s, fondo, caja, border_radius=12)
+        pygame.draw.rect(s, (30, 40, 70), caja, 2, border_radius=12)
+        cx, cy = caja.center
+        if marchita:
+            img = texto("!", 20, (255, 255, 255), sombra=False)
+            s.blit(img, img.get_rect(center=(cx, cy)))
+            falta = 1 - p["sed_t"] / AGUANTE
+            pygame.draw.arc(s, (255, 230, 120), caja.inflate(10, 10), math.pi / 2, math.pi / 2 + 2 * math.pi * falta, 3)
+        else:
+            col = mezclar((60, 140, 240), (120, 190, 255), parpadeo)
+            pygame.draw.circle(s, col, (cx, cy + 4), 7)
+            pygame.draw.polygon(s, col, [(cx - 6, cy + 1), (cx + 6, cy + 1), (cx, cy - 11)])
+            pygame.draw.circle(s, (230, 245, 255), (cx - 2, cy + 3), 2)
+
+    def _termometro(self, s, x, y):
+        pygame.draw.rect(s, (230, 234, 245), (x - 7, y - 40, 14, 50), border_radius=7)
+        pygame.draw.circle(s, (230, 234, 245), (x, y + 14), 12)
+        sube = 30 + 8 * math.sin(self.t * 6)
+        pygame.draw.rect(s, (240, 70, 50), (x - 3, y + 6 - sube, 6, sube + 4), border_radius=3)
+        pygame.draw.circle(s, (240, 70, 50), (x, y + 14), 8)
+        img = texto(t("mj.huerto.calor_c", "¡Calor!"), 16, COLORES["naranja"])
+        s.blit(img, img.get_rect(midtop=(x, y + 30)))
+
+    def _icono_xy(self, especie):
+        i = list(ESPECIES).index(especie)
+        return ZONA.centerx - 140 + i * 104, ZONA.top + 44
+
+    def _panel(self, s):
+        """Arriba al centro: lo cosechado (los frutos llegan volando)."""
+        caja = pygame.Rect(0, 0, 470, 62)
+        caja.midtop = (ZONA.centerx + 2, ZONA.top + 12)
+        s.blit(translucido(caja.w, caja.h, (6, 8, 20), 175), caja)
+        s.blit(texto(t("mj.huerto.panel", "COSECHA"), 8, (150, 230, 150), sombra=False, pixel_=True), (caja.left + 12, caja.top + 10))
+        for especie in ESPECIES:
+            x, y = self._icono_xy(especie)
+            _fruto(s, especie, x - 14, y, 1.0)
+            s.blit(texto(f"×{self.cuenta[especie]}", 18, COLORES["texto"]), (x + 2, y - 12))
+
+    def _ayuda(self, s):
+        """Flecha a la llave cuando la regadera está vacía (o casi)."""
+        if self.lata > 0.15 or self.llenando:
+            return
+        pulso = abs(math.sin(self.t * 5))
+        x, y = GRIFO[0] + 74, GRIFO[1] + 40 - int(10 * pulso)
+        pygame.draw.polygon(s, COLORES["oro"], [(x - 40, y), (x - 18, y - 14), (x - 18, y + 14)])
+        pygame.draw.rect(s, COLORES["oro"], (x - 20, y - 6, 26, 12))
+        img = texto(t("mj.huerto.llenar", "¡Llenala aquí!"), 18, COLORES["oro"])
+        s.blit(img, (x + 12, y - img.get_height() // 2))
+        luz(s, GRIFO[0], GRIFO[1], 50, COLORES["oro"], 0.3 + 0.3 * pulso)
+
+    def _regadera(self, s):
+        mx, my = self.raton
+        if not ZONA.collidepoint(mx, my):
+            return
+        img = _regadera(int(round(self.lata * 12)))
+        a = self.giro
+        if a > 0.5:
+            img = pygame.transform.rotozoom(img, a, 1.0)
+        rad = math.radians(a)
+        vx, vy = PUNTA[0] - 75, PUNTA[1] - 60
+        rx = vx * math.cos(rad) + vy * math.sin(rad)
+        ry = -vx * math.sin(rad) + vy * math.cos(rad)
+        if self.llenando:
+            luz(s, mx + 66, my - 34, 70, (120, 200, 255), 0.35)
+        s.blit(img, img.get_rect(center=(int(mx - rx), int(my - ry))))

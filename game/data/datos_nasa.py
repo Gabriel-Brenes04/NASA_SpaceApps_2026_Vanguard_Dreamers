@@ -83,6 +83,8 @@ REFERENCIAS_OTRAS = [
      "https://science.nasa.gov/moon/moon-water-and-ices/"),
     ("Una fulguración X es 10 veces una M y 100 veces una C", "NASA Science, Solar Storms and Flares",
      "https://science.nasa.gov/sun/solar-storms-and-flares/"),
+    ("Astronautas comieron lechuga del Veggie (2015)", "NASA, blog de la Estación, 10/08/2015",
+     "https://www.nasa.gov/blogs/spacestation/2015/08/10/cosmonauts-complete-russian-spacewalk"),
 ]
 
 # ══ Fuentes que se muestran en la pantalla «Los datos reales del juego» ═══════════════════════

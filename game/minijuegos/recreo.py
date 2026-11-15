@@ -22,7 +22,7 @@ import math
 import pygame
 
 from .base import ZONA, COLORES
-from ._kit import Partida, luz, degradado, guardado, texto, mezclar, translucido
+from ._kit import Partida, luz, degradado, guardado, texto, mezclar, translucido, estrella
 from ..assets import sonido
 from ..assets.textos import t, n
 
@@ -100,6 +100,111 @@ def bandera_cr(sup, x, y, w, h):
     alto = h / 6
     for i, c in enumerate(CR_COLORES):
         pygame.draw.rect(sup, c, (x, int(y + i * alto), w, int(alto) + 1))
+
+
+USA_ROJO, USA_AZUL = (178, 34, 52), (60, 59, 110)     # los colores oficiales («Old Glory»)
+
+
+def _usa(s, W, H):
+    """La bandera de Estados Unidos: 13 franjas y el cuadro azul con 50 estrellas (filas de 6 y 5)."""
+    for i in range(13):
+        y0, y1 = round(i * H / 13), round((i + 1) * H / 13)
+        pygame.draw.rect(s, USA_ROJO if i % 2 == 0 else (255, 255, 255), (0, y0, W, y1 - y0))
+    cw, ch = round(W * 0.4), round(7 * H / 13)
+    pygame.draw.rect(s, USA_AZUL, (0, 0, cw, ch))
+    for fila in range(9):
+        for c in range(6 if fila % 2 == 0 else 5):
+            x = cw * (2 * c + (1 if fila % 2 == 0 else 2)) / 12
+            pygame.draw.circle(s, (255, 255, 255), (x, ch * (fila + 1) / 10), max(1, round(W / 110)))
+
+
+def _cr(s, W, H):
+    for i, c in enumerate(CR_COLORES):
+        y0, y1 = round(i * H / 6), round((i + 1) * H / 6)
+        pygame.draw.rect(s, c, (0, y0, W, y1 - y0))
+
+
+def bandera(tipo, w, h, borde):
+    """Una bandera bordada para el uniforme: se dibuja 4 veces más grande y se achica suave."""
+    def hacer():
+        k = 4
+        big = pygame.Surface((w * k, h * k), pygame.SRCALPHA)
+        (_usa if tipo == "usa" else _cr)(big, w * k, h * k)
+        s = pygame.transform.smoothscale(big, (w, h))
+        luz_ = pygame.Surface((w, h // 2), pygame.SRCALPHA)
+        luz_.fill((255, 255, 255, 26))                               # la tela brilla un poco arriba
+        s.blit(luz_, (0, 0))
+        pygame.draw.rect(s, borde, s.get_rect(), 1)                  # la costura del borde
+        return s
+    return guardado(("bandera", tipo, w, h, tuple(borde)), hacer)
+
+
+def parche_mision(D):
+    """El parche de la misión (propio: NO es el logo de la NASA, que no se puede usar sin permiso).
+    La Tierra saliendo sobre la Luna, la base con su ventanita y la ruta de ida, con borde dorado bordado."""
+    def hacer():
+        import random
+        k = 4
+        S = D * k
+        c = S / 2
+        s = pygame.Surface((S, S), pygame.SRCALPHA)
+        pygame.draw.circle(s, (110, 84, 28), (c, c), c)                       # borde bordado (dorado)
+        pygame.draw.circle(s, (236, 196, 90), (c, c), c - k)
+        pygame.draw.circle(s, (22, 32, 88), (c, c), c - 2.4 * k)              # anillo azul marino
+        ri = c - 6.2 * k
+        for j in range(7):                                                     # estrellas en el anillo
+            a = math.pi * (1.18 + 0.64 * j / 6)
+            rr = (c - 2.4 * k + ri) / 2
+            estrella(s, c + math.cos(a) * rr, c + math.sin(a) * rr, 1.5 * k, (250, 236, 190))
+        # el dibujo de adentro
+        arte = pygame.Surface((S, S), pygame.SRCALPHA)
+        arte.fill((6, 10, 34))
+        rng = random.Random(7)
+        for _ in range(14):
+            pygame.draw.circle(arte, (230, 236, 255), (rng.uniform(c - ri, c + ri), rng.uniform(c - ri, c + 0.3 * ri)),
+                               rng.choice((0.5, 0.7, 1.0)) * k)
+        ex, ey, er = c + 0.24 * ri, c - 0.22 * ri, 0.36 * ri
+        for i in range(8, 0, -1):                                             # el brillo de la Tierra
+            pygame.draw.circle(arte, mezclar((6, 10, 34), (46, 84, 170), (1 - i / 8) * 0.7), (ex, ey), er * (1 + 0.1 * i))
+        e = pygame.Surface((int(2 * er) + 2, int(2 * er) + 2), pygame.SRCALPHA)
+        q = e.get_width() / 2
+        pygame.draw.circle(e, (46, 118, 216), (q, q), er)
+        pygame.draw.ellipse(e, (72, 170, 92), (q - 0.75 * er, q - 0.55 * er, 0.7 * er, 0.55 * er))
+        pygame.draw.ellipse(e, (72, 170, 92), (q - 0.05 * er, q - 0.05 * er, 0.45 * er, 0.75 * er))
+        pygame.draw.arc(e, (245, 248, 255), (q - 0.8 * er, q - 0.9 * er, 1.6 * er, 1.2 * er), 0.4, 2.2, max(1, k))
+        pygame.draw.arc(e, (245, 248, 255), (q - 0.6 * er, q + 0.1 * er, 1.3 * er, 0.7 * er), 3.6, 5.4, max(1, k))
+        sombra = pygame.Surface(e.get_size(), pygame.SRCALPHA)
+        pygame.draw.circle(sombra, (0, 6, 30, 150), (q, q), er)
+        pygame.draw.circle(sombra, (0, 0, 0, 0), (q + 0.42 * er, q - 0.2 * er), er)   # el lado con sol
+        e.blit(sombra, (0, 0))
+        mascara = pygame.Surface(e.get_size(), pygame.SRCALPHA)
+        pygame.draw.circle(mascara, (255, 255, 255, 255), (q, q), er)
+        e.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        arte.blit(e, (ex - q, ey - q))
+        # la ruta de ida (puntos dorados) de la Tierra a la base
+        mx, my = c - 0.2 * ri, c + 0.36 * ri
+        for j in range(3, 15, 2):
+            u = j / 15
+            bx = (1 - u) ** 2 * (ex - 0.8 * er) + 2 * u * (1 - u) * (c - 0.55 * ri) + u * u * mx
+            by = (1 - u) ** 2 * (ey + 0.3 * er) + 2 * u * (1 - u) * (c - 0.45 * ri) + u * u * (my - 0.2 * ri)
+            pygame.draw.circle(arte, (246, 204, 96), (bx, by), 0.8 * k)
+        # la base (una cúpula con ventanita y antena) y el horizonte de la Luna
+        pygame.draw.line(arte, (210, 214, 224), (mx + 0.08 * ri, my - 0.14 * ri), (mx + 0.12 * ri, my - 0.32 * ri), k)
+        pygame.draw.circle(arte, (255, 90, 80), (mx + 0.12 * ri, my - 0.32 * ri), 0.9 * k)
+        pygame.draw.circle(arte, (238, 240, 246), (mx, my + 0.05 * ri), 0.2 * ri)
+        pygame.draw.circle(arte, (255, 206, 90), (mx - 0.05 * ri, my - 0.03 * ri), 0.055 * ri)
+        lc = (c - 0.1 * ri, c + 1.45 * ri)
+        pygame.draw.circle(arte, (226, 228, 234), lc, 1.0 * ri)
+        pygame.draw.circle(arte, (172, 174, 184), (lc[0], lc[1] + 0.05 * ri), 1.0 * ri)
+        for cx, cy, w in ((-0.5, 0.62, 0.22), (0.32, 0.7, 0.16), (-0.05, 0.84, 0.26), (0.62, 0.58, 0.1)):
+            pygame.draw.ellipse(arte, (140, 142, 154), (c + (cx - w / 2) * ri, c + cy * ri, w * ri, w * 0.4 * ri))
+        mascara = pygame.Surface((S, S), pygame.SRCALPHA)
+        pygame.draw.circle(mascara, (255, 255, 255, 255), (c, c), ri)
+        arte.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        s.blit(arte, (0, 0))
+        pygame.draw.circle(s, (236, 196, 90), (c, c), ri + 0.5 * k, max(1, k))
+        return pygame.transform.smoothscale(s, (D, D))
+    return guardado(("parche_mision", D), hacer)
 
 
 class Recreo(Partida):
@@ -482,8 +587,8 @@ class Recreo(Partida):
         if self.etapa == "juego" and self._adentro(*self.raton):
             self._visor(lienzo)
         # la tripulación mirando por la ventana (de espaldas, con el mono azul de vuelo)
-        for i, (hx, hy, mono, pelo, cola) in enumerate(((228, 566, (46, 86, 168), (40, 28, 22), True),
-                                                        (338, 578, (36, 70, 148), (20, 18, 20), False))):
+        for i, (hx, hy, mono, pelo, cola) in enumerate(((228, 540, (46, 86, 168), (40, 28, 22), True),
+                                                        (338, 552, (36, 70, 148), (20, 18, 20), False))):
             brinco = int(12 * math.sin(math.pi * self.salto / 0.35)) if self.salto > 0 and i == len(self.album) % 2 else 0
             self._tripulante(lienzo, hx, hy - brinco, mono, pelo, cola, i)
         # álbum: las fotos que vuelan y la pila
@@ -554,15 +659,14 @@ class Recreo(Partida):
         pygame.draw.line(lienzo, mezclar(mono, (255, 255, 255), 0.18), (hx - 64, y + 64), (hx - 30, y + 40), 2)
         pygame.draw.rect(lienzo, piel, (hx - 12, y + 16, 24, 20))                   # cuello
         pygame.draw.ellipse(lienzo, osc, (hx - 26, y + 26, 52, 18), 4)               # el cuello del mono
-        # parche de la misión (hombro izquierdo): la Luna y una estrella
-        px, py = hx - 50, y + 62
-        pygame.draw.circle(lienzo, (16, 26, 66), (px, py), 13)
-        pygame.draw.circle(lienzo, (230, 232, 240), (px, py), 13, 2)
-        pygame.draw.circle(lienzo, (200, 200, 210), (px + 3, py + 2), 5)
-        pygame.draw.circle(lienzo, (250, 210, 70), (px - 5, py - 5), 2)
-        # bandera de Costa Rica (hombro derecho)
-        bandera_cr(lienzo, hx + 34, y + 52, 26, 16)
-        pygame.draw.rect(lienzo, osc, (hx + 33, y + 51, 28, 18), 1)
+        # el parche de la misión, grande en la espalda
+        p = parche_mision(42)
+        lienzo.blit(p, p.get_rect(center=(hx, y + 70)))
+        # la bandera en el hombro de afuera: Estados Unidos (izquierda) y Costa Rica (derecha)
+        if i == 0:
+            lienzo.blit(bandera("usa", 30, 18, osc), (hx - 64, y + 50))
+        else:
+            lienzo.blit(bandera("cr", 30, 18, osc), (hx + 34, y + 50))
         # cabeza: pelo y orejas
         pygame.draw.circle(lienzo, piel, (hx - 33, y - 2), 8)
         pygame.draw.circle(lienzo, piel, (hx + 33, y - 2), 8)

@@ -96,7 +96,7 @@ python -m game.main
 
 ### Para el equipo: cómo hacer o mejorar un microjuego
 
-Aquí están los cuatro nuestros: `oxigeno`, `hielo`, `recreo` y `estiba`. Los demás los hace el resto del equipo; mientras no estén aquí, esas tareas se hacen solas. Cada quien trabaja en
+Aquí están los nuestros: `oxigeno`, `hielo`, `recreo`, `estiba` y `huerto` (la cosecha). Los paneles (`solaris/`) y el barrido de radiación (`barrido_orbital/`) los hizo el resto del equipo. Cada quien trabaja en
 **su propio archivo** y el juego lo encuentra solo. La guía completa está en
 [game/minijuegos/LEEME.md](game/minijuegos/LEEME.md).
 
@@ -105,8 +105,8 @@ Aquí están los cuatro nuestros: `oxigeno`, `hielo`, `recreo` y `estiba`. Los d
 3. Probarlo solo: `python game/tools/probar_microjuego.py huerto`
 4. Antes de subirlo: `python game/tools/verificar.py` tiene que decir **TODO OK**.
 
-Los nuestros (`oxigeno`, `hielo`, `recreo`
-y `estiba`) usan el kit `game/minijuegos/_kit.py`: cuenta regresiva, niveles que se adaptan, combo,
+Los nuestros (`oxigeno`, `hielo`, `recreo`,
+`estiba` y `huerto`) usan el kit `game/minijuegos/_kit.py`: cuenta regresiva, niveles que se adaptan, combo,
 efectos y la tarjeta final con estrellas.
 
 ### Qué hay en cada carpeta
