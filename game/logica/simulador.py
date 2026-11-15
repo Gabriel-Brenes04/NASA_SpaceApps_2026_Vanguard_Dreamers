@@ -190,7 +190,7 @@ def tarea_titulo(tid):
         "hielo": t("tarea.hielo", "Traer hielo del cráter"),
         "recreo": t("tarea.recreo", "Recreo de la tripulación"),
         "estiba": t("tarea.estiba", "Estiba del cohete de carga"),
-        "paneles": t("tarea.paneles", "Limpiar y alinear los paneles solares"),
+        "paneles": t("tarea.paneles", "Alinear los paneles solares"),
     }[tid]
 
 
@@ -313,7 +313,7 @@ class Mision:
         if tid == "paneles":
             kwh = PANELES_KWH * r
             e.energia += kwh
-            return [t("tar.paneles", "Con los paneles limpios y de frente al Sol entraron {k} kWh más.",
+            return [t("tar.paneles", "Con los paneles de frente al Sol entraron {k} kWh más.",
                       k=n(kwh, 0))]
         if tid == "estiba":
             c = e.carga_hoy
@@ -325,7 +325,7 @@ class Mision:
         if tid == "paneles":
             kwh = PANELES_KWH * r
             e.energia = min(MAXIMOS["energia"], e.energia + kwh)
-            return [t("tar.paneles", "Con los paneles limpios y de frente al Sol entraron {k} kWh más.",
+            return [t("tar.paneles", "Con los paneles de frente al Sol entraron {k} kWh más.",
                       k=n(kwh, 0))]
         return []
 

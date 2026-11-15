@@ -1,4 +1,3 @@
-import math
 import os
 import random
 import pygame
@@ -6,9 +5,17 @@ import pygame
 from . import settings as S
 from .systems.solar_system import SolarSystem
 from .systems.energy_manager import EnergyManager
+from ...assets import sonido
 
 
-FIN_ESPERA = 4.0      # segundos que se ve la pantalla final antes de volver a Mission Survival
+INSTRUCCION = "Rota los paneles con la rueda del mouse o las flechas de tu teclado!"
+FIN_ESPERA = 2.5      # segundos que se ve la cajita final antes de volver a Mission Survival
+BATERIA_BAJA = 20.0   # por debajo de este % suena la alarma
+
+
+def suena(nombre, vol=1.0):
+    if sonido is not None:
+        sonido.play(nombre, vol)
 
 
 class SolarisGame:
@@ -20,11 +27,14 @@ class SolarisGame:
             self.screen = screen
         pygame.display.set_caption("SOLARIS - Operacion Helios")
         self.clock = pygame.time.Clock()
-        self.font = self.load_font(14)
+        self.big = self.load_font(18)
+        self.font = self.load_font(13)
         self.small = self.load_font(10)
         self.tiny = self.load_font(8)
-        self.state = "PLAYING"        # sin pantalla de inicio: se juega de una vez
+        if sonido is not None and not sonido.ACTIVO:
+            sonido.iniciar()
         self.running = True
+        pygame.key.set_repeat(200, 40)
         self.reset()
 
     def load_font(self, size):
@@ -36,74 +46,85 @@ class SolarisGame:
         self.solar = SolarSystem()
         self.energy = EnergyManager()
         self.elapsed = 0.0
+        self.score = 0.0
+        self.state = "PLAYING"            # PLAYING, WON o LOST
         self.fin_timer = 0.0
-        self.score = 0
-        self.message_timer = 0.0
-        self.message = ""
+        self.alarma_timer = 0.0
+        self.ultimo_segundo = int(S.GAME_DURATION)
         self.stars = [(random.randrange(S.WIDTH), random.randrange(S.HEIGHT), random.choice((1, 1, 2))) for _ in range(100)]
+        suena("ya", 0.8)
 
-    def text(self, value, x, y, color=S.WHITE, font=None, center=False):
-        font = font or self.small
-        image = font.render(str(value), True, color)
-        rect = image.get_rect()
-        if center:
-            rect.center = (x, y)
-        else:
-            rect.topleft = (x, y)
-        self.screen.blit(image, rect)
-
-    def panel(self, rect, fill=(12, 24, 43), border=(42, 76, 108)):
-        pygame.draw.rect(self.screen, fill, rect, border_radius=8)
-        pygame.draw.rect(self.screen, border, rect, 1, border_radius=8)
+    # ── controles ────────────────────────────────────────────────────────────────
+    def rotar(self, grados):
+        panel = self.solar.panels[self.solar.selected]
+        antes = panel.efficiency
+        self.solar.rotate_selected(grados)
+        despues = panel.get_efficiency(self.solar.sun_x, self.solar.sun_y)
+        suena("click", 0.6)
+        if antes < 0.8 <= despues:
+            suena("bien", 0.7)            # el panel quedó bien apuntado al sol (pasa a verde)
 
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.running = False
         elif event.type == pygame.KEYDOWN:
-            if self.state == "PLAYING":
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False          # ESC: volver al juego principal
-                elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
-                    self.solar.rotate_selected(-4)
-                elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
-                    self.solar.rotate_selected(4)
-                elif event.key == pygame.K_q:
-                    self.solar.rotate_selected(-15)
-                elif event.key == pygame.K_e:
-                    self.solar.rotate_selected(15)
-                elif event.key == pygame.K_TAB:
-                    self.solar.select_at((self.solar.panels[(self.solar.selected + 1) % len(self.solar.panels)].x,
-                                          self.solar.panels[(self.solar.selected + 1) % len(self.solar.panels)].y))
-            elif self.state in ("WON", "LOST"):
+            if self.state != "PLAYING":
                 if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
-                    self.running = False          # salir sin esperar
+                    self.running = False      # salir sin esperar
+            elif event.key == pygame.K_ESCAPE:
+                self.running = False          # ESC: volver al juego principal
+            elif event.key in (pygame.K_LEFT, pygame.K_a):
+                self.rotar(-2)
+            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                self.rotar(2)
         elif event.type == pygame.MOUSEBUTTONDOWN and self.state == "PLAYING":
             if event.button == 1:
-                self.solar.select_at(event.pos)
+                if self.solar.select_at(event.pos):
+                    suena("clac", 0.6)
             elif event.button == 4:
-                self.solar.rotate_selected(4)
+                self.rotar(2)
             elif event.button == 5:
-                self.solar.rotate_selected(-4)
+                self.rotar(-2)
 
+    # ── lógica ───────────────────────────────────────────────────────────────────
     def update(self, dt):
-        if self.state in ("WON", "LOST"):
+        if self.state != "PLAYING":
             self.fin_timer += dt
             if self.fin_timer >= FIN_ESPERA:
-                self.running = False              # sale solo, sin necesidad de ESC
-            return
-        if self.state != "PLAYING":
+                self.running = False          # vuelve solo al juego principal
             return
         self.elapsed += dt
         self.solar.update(dt, self.elapsed)
-        self.energy.update(dt, self.solar.production_kw())
-        self.score += int(self.solar.production_kw() * dt)
+        produccion = self.solar.production_kw()
+        self.energy.update(dt, produccion)
+        self.score += produccion * dt
+
+        # alarma mientras la batería está baja
+        if self.energy.battery < BATERIA_BAJA:
+            self.alarma_timer -= dt
+            if self.alarma_timer <= 0:
+                suena("alarma", 0.6)
+                self.alarma_timer = 1.0
+        else:
+            self.alarma_timer = 0.0
+
+        # cuenta regresiva de los últimos 3 segundos
+        quedan = int(S.GAME_DURATION - self.elapsed)
+        if quedan != self.ultimo_segundo:
+            self.ultimo_segundo = quedan
+            if 0 <= quedan < 3:
+                suena("cuenta", 0.7)
+
         if self.energy.blackout:
             self.state = "LOST"
+            suena("derrota")
         elif self.elapsed >= S.GAME_DURATION:
             self.state = "WON"
-        if self.message_timer > 0:
-            self.message_timer -= dt
+            suena("victoria")
+        if self.state != "PLAYING" and sonido is not None:
+            sonido.parar_bucles()
 
+    # ── dibujo ───────────────────────────────────────────────────────────────────
     def draw_background(self):
         self.screen.fill(S.BG)
         for x in range(0, S.WIDTH, 40):
@@ -113,59 +134,40 @@ class SolarisGame:
         for x, y, radius in self.stars:
             self.screen.set_at((x, y), (75, 105, 140) if radius == 1 else (115, 145, 175))
 
-    def draw_hud(self):
-        self.panel((18, 14, 988, 78))
-        self.text("SOLARIS / OPERACION HELIOS", 34, 25, S.CYAN, self.small)
-        remaining = max(0, int(S.GAME_DURATION - self.elapsed))
-        self.text(f"TIEMPO  {remaining // 60:02}:{remaining % 60:02}", 34, 49, S.WHITE, self.small)
-        self.text(f"PUNTOS  {self.score:06}", 280, 49, S.YELLOW, self.small)
-        self.text(f"GENERACION  {self.energy.production:5.1f} kW", 520, 25, S.GREEN, self.small)
-        self.text(f"CONSUMO  {self.energy.consumption:.0f} kW", 520, 49, S.MUTED, self.small)
-        self.text(f"BATERIA  {self.energy.battery:4.0f}%", 790, 25, S.WHITE, self.small)
-        bar = pygame.Rect(790, 48, 190, 13)
-        pygame.draw.rect(self.screen, (35, 49, 68), bar, border_radius=5)
-        fill = max(0, int(bar.width * self.energy.battery / S.BATTERY_CAPACITY))
-        color = S.GREEN if self.energy.battery > 35 else S.YELLOW if self.energy.battery > 15 else S.RED
-        pygame.draw.rect(self.screen, color, (bar.x, bar.y, fill, bar.height), border_radius=5)
-        pygame.draw.rect(self.screen, (110, 135, 160), bar, 1, border_radius=5)
+    def text(self, value, y, color, font):
+        image = font.render(str(value), True, color)
+        self.screen.blit(image, image.get_rect(center=(S.WIDTH // 2, y)))
 
-    def draw_controls(self):
-        self.panel((18, 574, 988, 48))
-        self.text("CLIC: SELECCIONAR PANEL", 32, 591, S.WHITE, self.tiny)
-        self.text("A / D o FLECHAS: ROTAR", 315, 591, S.WHITE, self.tiny)
-        self.text("Q / E: GIRO RAPIDO", 585, 591, S.WHITE, self.tiny)
-        self.text("ESC: SALIR", 830, 591, S.MUTED, self.tiny)
-
-    def draw_playing(self):
-        self.solar.draw(self.screen, self.small, self.tiny)
-        self.draw_hud()
-        self.draw_controls()
-        selected = self.solar.panels[self.solar.selected]
-        self.text(f"PANEL ACTIVO: {selected.name}  |  ORIENTACION: {selected.angle:05.1f} grados",
-                  S.WIDTH // 2, 548, S.CYAN, self.tiny, center=True)
-        if self.solar.in_shadow:
-            self.text("La estacion esta en sombra: utiliza la energia almacenada.", S.WIDTH // 2, 135, S.ORANGE, self.tiny, center=True)
-        elif self.solar.storm_active:
-            self.text("La tormenta solar reduce temporalmente la eficiencia de los paneles.", S.WIDTH // 2, 135, S.YELLOW, self.tiny, center=True)
+    def draw_battery(self):
+        bateria = self.energy.battery
+        color = S.GREEN if bateria > 35 else S.YELLOW if bateria > BATERIA_BAJA else S.RED
+        self.text(f"BATERIA {bateria:3.0f}%", S.HEIGHT - 50, color, self.small)
+        barra = pygame.Rect(0, 0, 260, 14)
+        barra.center = (S.WIDTH // 2, S.HEIGHT - 28)
+        pygame.draw.rect(self.screen, (35, 49, 68), barra, border_radius=5)
+        lleno = max(0, int(barra.width * bateria / S.BATTERY_CAPACITY))
+        pygame.draw.rect(self.screen, color, (barra.x, barra.y, lleno, barra.height), border_radius=5)
+        pygame.draw.rect(self.screen, (110, 135, 160), barra, 1, border_radius=5)
 
     def draw_end(self):
-        self.panel((190, 190, 644, 250), (9, 20, 37), S.CYAN if self.state == "WON" else S.RED)
-        title = "OPERACION COMPLETADA" if self.state == "WON" else "FALLO ENERGETICO"
-        color = S.GREEN if self.state == "WON" else S.RED
-        self.text(title, S.WIDTH // 2, 235, color, self.small, center=True)
-        self.text(f"PUNTUACION: {self.score}", S.WIDTH // 2, 290, S.WHITE, self.small, center=True)
-        self.text(f"ENERGIA FINAL: {self.energy.battery:.1f}%", S.WIDTH // 2, 325, S.WHITE, self.small, center=True)
-        faltan = max(0, int(FIN_ESPERA - self.fin_timer) + 1)
-        self.text(f"VOLVIENDO A MISSION SURVIVAL EN {faltan} s", S.WIDTH // 2, 375, S.GREEN, self.tiny, center=True)
-        self.text("ENTER: SALIR YA", S.WIDTH // 2, 405, S.MUTED, self.tiny, center=True)
+        gano = self.state == "WON"
+        caja = pygame.Rect(0, 0, 480, 170)
+        caja.center = (S.WIDTH // 2, S.HEIGHT // 2)
+        pygame.draw.rect(self.screen, (9, 20, 37), caja, border_radius=10)
+        pygame.draw.rect(self.screen, S.CYAN if gano else S.RED, caja, 2, border_radius=10)
+        self.text("OPERACION COMPLETADA" if gano else "FALLO ENERGETICO", caja.top + 55,
+                  S.GREEN if gano else S.RED, self.big)
+        self.text(f"PUNTUACION: {int(self.score)}", caja.top + 115, S.WHITE, self.font)
 
     def draw(self):
         self.draw_background()
-        if self.state == "PLAYING":
-            self.draw_playing()
-        else:
-            self.solar.draw(self.screen, self.small, self.tiny)
-            self.draw_hud()
+        self.solar.draw(self.screen, self.small, self.font)
+        image = self.font.render(INSTRUCCION, True, S.WHITE)
+        self.screen.blit(image, image.get_rect(midtop=(S.WIDTH // 2, 20)))
+        self.draw_battery()
+        quedan = max(0, int(S.GAME_DURATION - self.elapsed + 0.999))
+        self.text(f"TIEMPO {quedan // 60:02}:{quedan % 60:02}", 62, S.RED if quedan <= 5 else S.YELLOW, self.big)
+        if self.state != "PLAYING":
             self.draw_end()
         pygame.display.flip()
 
@@ -176,6 +178,8 @@ class SolarisGame:
                 self.handle_event(event)
             self.update(dt)
             self.draw()
+        if sonido is not None:
+            sonido.parar_bucles()
         if cerrar_pygame:
             pygame.quit()
 

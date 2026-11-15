@@ -31,6 +31,7 @@ from ..minijuegos.solaris.main import main as iniciar_solaris
 from ..escenas.titulo import MenuInicial
 from ..escenas.info import PantallasInformacion
 from ..escenas.ayuda import AyudaMixin
+from ..escenas.mapa import MapaMixin
 
 
 from . import clima
@@ -67,7 +68,7 @@ class Boton:
         self.activo, self.tam, self.negrita, self.tecla = activo, tam, negrita, tecla
 
 
-class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
+class Juego(MenuInicial, PantallasInformacion, AyudaMixin, MapaMixin):
     def __init__(self, ventana=True):
         if ventana and sys.platform == "win32":
             try:
@@ -288,7 +289,7 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
                             self._alternar_completa()
                         elif self.fase == "titulo":
                             return
-                        elif self.fase in ("datos", "como"):
+                        elif self.fase in ("datos", "como", "mapa"):
                             self.fase = self.volver_a
                         elif self.fase == "micro":
                             self.terminar_micro(saltado=True)
@@ -454,6 +455,8 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
             self._datos()
         elif f == "fin":
             self._fin()
+        elif f == "mapa":
+            self._mapa()
         elif f == "micro":
             self.mj.dibujar_todo(self.lienzo, fuente)
             self.txt(t("mic.esc", "ESC para saltar (rinde el 90 %)"), 15, "gris2", W - 40, H - 30, derecha=True)
@@ -526,7 +529,7 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
             self.boton((W - 150 + ARR_X, 8 + ARR_Y, 136, 40), t("tab.menu", "Menú"),
                        lambda: setattr(self, "fase", "titulo"), tam=18)
             self.boton((LB_X, LB_Y, LB_W, LB_H), t("tit.mapa", "Ver mapa"),
-                       lambda: None, tam=16)     
+                       self.abrir_mapa, tam=16)     
         # indicadores
         PX, PY = IND_X, IND_Y
         ancho = i_x(420)

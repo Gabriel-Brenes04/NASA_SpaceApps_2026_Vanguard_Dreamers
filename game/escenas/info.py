@@ -10,25 +10,23 @@ class PantallasInformacion:
         self.caja((140, 40, 1000, 640), "panel")
         self.pix(t("como.tit", "Cómo se juega"), 24, "oro", W // 2, 82, centro=True)
         pasos = [
-            (t("como.1t", "1 · Mañana"), t("como.1", "Mirá los 6 indicadores de la base y el reporte. Podés "
-                                                        "encender o apagar los sistemas con un clic.")),
-            (t("como.2t", "2 · Una decisión"), t("como.2", "Cada día llega un problema con números reales. "
-                                                            "Hacé la cuenta: la mejor opción sale de la matemática.")),
-            (t("como.3t", "3 · Una tarea"), t("como.3", "Hay 7 tareas: cosechar, hacer oxígeno, medir la "
-                                                        "radiación, traer hielo, descansar, guardar la carga y "
-                                                        "alinear los paneles. Escogé una por día.")),
-            (t("como.4t", "4 · Fin del día"), t("como.4", "La base consume y produce. Mirá qué subió y qué bajó.")),
+            (t("como.1t", "1 · Tipo de juego"), t("como.1", "Este es un juego de supervivencia, gestión de recursos y "
+                                                            "toma de decisiones.")),
+            (t("como.2t", "2 · La misión"), t("como.2", "El objetivo es sobrevivir con la tripulación completa durante " \
+                                                        "toda la misión admnistrando una estación espacial lunar.")),
+            (t("como.3t", "3 · Desiciones bajo presión"), t("como.3", "Hay que resolver distintos tipos de tareas y resolver problemas "
+                                                                    "bajo presión, al igual que los astronautas.")),
+            (t("como.4t", "4 · Fin "), t("como.4", "Juega y aprende. Al final de la misión, obtendrás tu calificación.")),
         ]
         y = 130
         for tit, desc in pasos:
             self.txt(tit, 24, "cian", 200, y, True)
             y += 34 + self.rico(desc, 21, "texto", 200, y + 32, 880)
         y += 10
-        self.rico(t("como.gana", "Se gana llegando al último día con la tripulación bien. La misión completa dura "
-                                    "28 días: un día lunar entero, 14 de sol y 14 de noche. La corta dura 14: los últimos "
-                                    "7 días de sol y los primeros 7 de la noche. Se pierde si se acaba el oxígeno, el agua "
-                                    "o la comida, si la radiación pasa el límite de la misión (250 mSv) o si el ánimo llega "
-                                    "a cero."), 20, "oro", 200, y, 880)
+        self.rico(t("como.gana", "Se gana llegando al último día con la tripulación en buenas condiciones. " 
+                                 "La demo inicial dura 14 días: 7 de sol y 7 de noche."
+                                  "Se pierde si se acaba el oxígeno, el agua o la comida, si la radiación supera"
+                                    "el límite, o si la motivación del equipo llega a cero. "), 20, "oro", 200, y, 880)
         self.boton_ayuda(W - 190, 82, "recursos", etiqueta=t("como.q", ""))
         self.boton((W // 2 - 120, 600, 240, 52), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
                     tecla=[pygame.K_RETURN, pygame.K_ESCAPE])

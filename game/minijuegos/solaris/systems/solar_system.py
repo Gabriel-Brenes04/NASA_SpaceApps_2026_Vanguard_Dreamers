@@ -8,6 +8,7 @@ class SolarSystem:
     def __init__(self):
         self.center = (S.WIDTH // 2, 330)
         self.orbit_time = 0.0
+        self.phase = 0.0
         self.panels = [
             SolarPanel("ALFA", 365, 190, 35),
             SolarPanel("BETA", 660, 190, 145),
@@ -18,16 +19,12 @@ class SolarSystem:
         self.panels[0].selected = True
         self.sun_x = 850.0
         self.sun_y = 180.0
-        self.in_shadow = False
-        self.storm_active = False
 
     def update(self, dt, elapsed):
         self.orbit_time += dt
-        phase = self.orbit_time * 0.075
-        self.sun_x = self.center[0] + math.cos(phase) * 405
-        self.sun_y = self.center[1] + math.sin(phase) * 235
-        self.in_shadow = S.SHADOW_START <= elapsed % S.SHADOW_PERIOD < S.SHADOW_START + S.SHADOW_DURATION
-        self.storm_active = S.STORM_START <= elapsed % S.STORM_PERIOD < S.STORM_START + S.STORM_DURATION
+        self.phase += dt * (0.16 + 0.03 * elapsed)
+        self.sun_x = self.center[0] + math.cos(self.phase) * 405
+        self.sun_y = self.center[1] + math.sin(self.phase) * 235
         for panel in self.panels:
             panel.get_efficiency(self.sun_x, self.sun_y)
 
@@ -45,10 +42,7 @@ class SolarSystem:
         self.panels[self.selected].rotate(amount)
 
     def production_kw(self):
-        if self.in_shadow:
-            return 0.0
-        factor = 0.62 if self.storm_active else 1.0
-        return sum(panel.max_output * panel.efficiency for panel in self.panels) * factor
+        return sum(panel.max_output * panel.efficiency for panel in self.panels)
 
     def draw(self, surface, font, small_font):
         # Trayectoria orbital del Sol
@@ -80,9 +74,3 @@ class SolarSystem:
         for panel in self.panels:
             panel.draw(surface, small_font)
 
-        if self.in_shadow:
-            label = font.render("ZONA DE SOMBRA: SIN GENERACION", True, S.ORANGE)
-            surface.blit(label, label.get_rect(center=(S.WIDTH // 2, 112)))
-        elif self.storm_active:
-            label = font.render("ALERTA: TORMENTA SOLAR", True, S.YELLOW)
-            surface.blit(label, label.get_rect(center=(S.WIDTH // 2, 112)))

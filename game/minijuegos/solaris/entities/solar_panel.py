@@ -49,9 +49,7 @@ class SolarPanel:
         end = (self.x + nx * 34, self.y + ny * 34)
         pygame.draw.line(surface, S.YELLOW, start, end, 3)
         pygame.draw.circle(surface, S.YELLOW, (int(end[0]), int(end[1])), 4)
-        label = font.render(self.name, True, S.WHITE)
-        surface.blit(label, label.get_rect(center=(self.x, self.y + 38)))
         pct = int(self.efficiency * 100)
         color = S.GREEN if pct >= 80 else S.YELLOW if pct >= 45 else S.RED
         value = font.render(f"{pct}%", True, color)
-        surface.blit(value, value.get_rect(center=(self.x, self.y + 54)))
+        surface.blit(value, value.get_rect(center=(self.x, self.y + 72)))
