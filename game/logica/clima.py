@@ -14,8 +14,8 @@ import os
 import threading
 import urllib.request
 
-from .textos import t, IDIOMA  # noqa: F401  (IDIOMA se lee de textos en cada llamada)
-from . import textos
+from ..assets.textos import t, IDIOMA  # noqa: F401  (IDIOMA se lee de textos en cada llamada)
+from ..assets import textos
 
 _RUTA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datos", "donki.json")
 _API = "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?startDate={ini}&endDate={fin}"

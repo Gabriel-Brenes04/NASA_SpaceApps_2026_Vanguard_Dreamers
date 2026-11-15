@@ -9,9 +9,9 @@ Ideas del equipo integradas: el muro de agua alrededor del dormitorio (arquitect
 reactor que se enciende al caer la noche, y el ángulo del panel solar.
 """
 from . import clima
-from . import datos_nasa as N
+from ..data import datos_nasa as N
 from . import simulador as S
-from .textos import t, n
+from ..assets.textos import t, n
 
 # ══ Calendario: qué decisión toca cada día ════════════════════════════════════════════════
 UNICAS = ("temperatura", "angulo")          # «llamada» va fija en el calendario
