@@ -57,7 +57,7 @@ Niños de 7 a 12 años administran una base en la Luna con 4 tripulantes durante
 
 1. **Mañana:** mirar los 6 indicadores y el reporte. Los sistemas se encienden y apagan con un clic.
 2. **Decisión:** un problema de decisión y manejo de recursos.
-3. **Tarea:** las 7 tareas: cosecha, fugas de oxígeno, barrido de radiación, perforar hielo, recreo (fotos a la Tierra), estiba de la carga y paneles solares. Cada una es un microjuego. 
+3. **Tarea:** las 8 tareas: cosecha, fugas de oxígeno, barrido de radiación, perforar hielo, recreo (fotos a la Tierra), estiba de la carga y paneles solares. Cada una es un microjuego. 
 4. **Cierre:** la base consume y produce; se ve qué subió y qué bajó.
 
 Se pierde si se acaba el oxígeno, el agua o la comida, si la radiación pasa el límite de la misión (250 mSv) o si el ánimo llega a cero.
