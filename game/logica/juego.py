@@ -470,16 +470,36 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
         self.volver_a = self.fase
         self.fase = fase
 
+
     # ── el tablero de la base ───────────────────────────────────────────────────────────
     def _tablero(self, interactivo):
         m, e = self.m, self.m.e
         de_dia = e.de_dia()
+
+        # ══ POSICIONES: 
+        ARR_X, ARR_Y = 0, 0          # barra de arriba: cuánto se corre (0, 0 = donde estaba)
+        BUT_X, BUT_Y = 30, 120       # buttom
+        BUT_W, BUT_H = 520, 60
+        IND_X, IND_Y = 920, 120       # indicadores: posición
+        IND_KX, IND_KY = 0.8, 0.78    # indicadores: tamaño en X (ancho) y en Y (alto). 1.0 = como antes
+        CEN_X, CEN_Y = 30, 200       # panel central (la base + sistemas + botón): posición
+        CEN_KX, CEN_KY = 1.96, 0.94    # panel central: tamaño en X (ancho) y en Y (alto)
+        REP_X, REP_Y = 920, 530      # reporte de hoy: posición
+        REP_KX, REP_KY = 0.95, 0.30   # reporte: tamaño en X (ancho) y en Y (alto)
+        # (las letras usan el más chico de los dos, para que no se deformen)
+        # ═════════════════════════════════════════════════════════════════════════════════
+        def esc(kx, ky):                          # escalas: en X, en Y y para las letras
+            return (lambda v: int(v * kx)), (lambda v: int(v * ky)), (lambda v: int(v * min(kx, ky)))
+        i_x, i_y, i_f = esc(IND_KX, IND_KY)
+        c_x, c_y, c_f = esc(CEN_KX, CEN_KY)
+        r_x, r_y, r_f = esc(REP_KX, REP_KY)
+
         # barra de arriba con el mapa de los días de la misión (una constelación de nodos)
-        self.caja((0, -14, W, 70), "panel", radio=0)
-        self.pix(t("tab.dia", "Día {d} de {t}", d=e.dia, t=e.total), 16, "oro", 18, 9)
+        self.caja((ARR_X, -14 + ARR_Y, W, 70), "panel", radio=0)
+        self.pix(t("tab.dia", "Día {d} de {t}", d=e.dia, t=e.total), 16, "oro", 18 + ARR_X, 9 + ARR_Y)
         self.txt(t("tab.luz", "Día lunar: hay sol") if de_dia else t("tab.noche", "Noche lunar: sin sol, −173 °C"),
-                 15, "amarillo" if de_dia else "cian", 18, 33)
-        x0, x1, yy = 330, 1010, 28
+                 15, "amarillo" if de_dia else "cian", 18 + ARR_X, 33 + ARR_Y)
+        x0, x1, yy = 330 + ARR_X, 1010 + ARR_X, 28 + ARR_Y
         paso = (x1 - x0) / (e.total - 1)
         pygame.draw.line(self.lienzo, C["borde"], (x0, yy), (x1, yy), 2)
         for d in range(1, e.total + 1):
@@ -498,11 +518,15 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
         self.txt(t("tab.sol", "sol"), 13, "gris", x0 - 6, yy + 12)
         self.txt(t("tab.noc", "noche"), 13, "gris", int(x0 + e.luz * paso) - 4, yy + 12)
         if interactivo:
-            self.boton((W - 150, 8, 136, 40), t("tab.menu", "Menú"), lambda: setattr(self, "fase", "titulo"), tam=18)
+            self.boton((W - 150 + ARR_X, 8 + ARR_Y, 136, 40), t("tab.menu", "Menú"),
+                       lambda: setattr(self, "fase", "titulo"), tam=18)
+
         # indicadores
-        self.caja((16, 66, 420, 520), "panel")
-        self.pix(t("tab.ind", "Indicadores"), 16, "oro", 34, 82)
-        y = 108
+        PX, PY = IND_X, IND_Y
+        ancho = i_x(420)
+        self.caja((PX, PY, ancho, i_y(520)), "panel")
+        self.pix(t("tab.ind", "Indicadores"), i_f(16), "oro", PX + i_x(18), PY + i_y(16))
+        y = PY + i_y(42)
         for k, mx, col, alto_malo in INDICADORES:
             v = getattr(e, k)
             frac = max(0.0, min(1.0, v / mx))
@@ -523,24 +547,26 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
                 sub = (t("ind.animo_bien", "con ganas") if v >= 60 else t("ind.animo_med", "cansada") if v >= 30
                        else t("ind.animo_mal", "agotada: rinde menos"))
                 critico = v < 30
-            self.txt(nombre_ind(k), 19, "texto", 34, y, True)
-            self.pix(valor_ind(k, v), 16, "rojo" if critico else "texto", 418, y + 3, derecha=True)
-            barra = pygame.Rect(34, y + 28, 384, 14)
+            self.txt(nombre_ind(k), i_f(19), "texto", PX + i_x(18), y, True)
+            self.pix(valor_ind(k, v), i_f(16), "rojo" if critico else "texto",
+                     PX + ancho - i_x(18), y + i_y(3), derecha=True)
+            barra = pygame.Rect(PX + i_x(18), y + i_y(28), ancho - i_x(36), max(4, i_y(14)))
             pygame.draw.rect(self.lienzo, (36, 42, 72), barra, border_radius=7)
             if frac > 0:
                 pygame.draw.rect(self.lienzo, C["rojo"] if critico else C[col],
                                  (barra.x, barra.y, max(8, int(barra.w * frac)), barra.h), border_radius=7)
-            self.txt(sub, 15, "rojo" if critico else "gris", 34, y + 46)
-            y += 79
+            self.txt(sub, i_f(15), "rojo" if critico else "gris", PX + i_x(18), y + i_y(46))
+            y += i_y(79)
+
         # la base dibujada
-        self._escena(pygame.Rect(452, 66, 440, 330))
+        self._escena(pygame.Rect(CEN_X, CEN_Y, c_x(440), c_y(330)))
         # sistemas
-        self.caja((452, 406, 440, 180), "panel")
-        r_sis = self.pix(t("tab.sis", "Sistemas"), 16, "oro", 468, 418)
+        self.caja((CEN_X, CEN_Y + c_y(340), c_x(440), c_y(180)), "panel")
+        r_sis = self.pix(t("tab.sis", "Sistemas"), c_f(16), "oro", CEN_X + c_x(16), CEN_Y + c_y(352))
         if interactivo:
-            self.txt(t("tab.sis_clic", "clic para encender o apagar"), 15, "gris", r_sis.right + 14, 415)
+            self.txt(t("tab.sis_clic", "clic para encender o apagar"), c_f(15), "gris", r_sis.right + 14, CEN_Y + c_y(349))
         for i, k in enumerate(("generador", "reciclador", "invernadero")):
-            r = pygame.Rect(468 + i * 140, 444, 130, 82)
+            r = pygame.Rect(CEN_X + c_x(16) + i * c_x(140), CEN_Y + c_y(378), c_x(130), c_y(82))
             on = e.sistemas[k] and not (k == "reciclador" and e.reciclador_roto)
             roto = k == "reciclador" and e.reciclador_roto
             col = "verde" if on else ("rojo" if roto else "gris2")
@@ -551,24 +577,27 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
             pygame.draw.rect(self.lienzo, C[col], r, 2, border_radius=10)
             nom = {"generador": t("sis.c.gen", "Generador O₂"), "reciclador": t("sis.c.rec", "Reciclador"),
                    "invernadero": t("sis.c.inv", "Invernadero")}[k]
-            self.txt(nom, 16, "texto", r.centerx, r.y + 16, True, centro=True)
-            self.txt(f"{n(S.CARGAS_KW[k])} kW", 15, "gris", r.centerx, r.y + 38, centro=True)
+            self.txt(nom, c_f(16), "texto", r.centerx, r.y + c_y(16), True, centro=True)
+            self.txt(f"{n(S.CARGAS_KW[k])} kW", c_f(15), "gris", r.centerx, r.y + c_y(38), centro=True)
             estado = (t("sis.roto", "AVERIADO") if roto else t("sis.on", "ENCENDIDO") if on else t("sis.off", "APAGADO"))
-            self.txt(estado, 15, col, r.centerx, r.y + 60, True, centro=True)
+            self.txt(estado, c_f(15), col, r.centerx, r.y + c_y(60), True, centro=True)
         entra, sale = e.kw_fuente(), e.kw_carga()
         fuente_txt = t("tab.panel", "panel solar") if de_dia else t("tab.reactor", "reactor")
         self.rico(t("tab.balance", "Entra {a} kW ({f}) · sale {b} kW · batería {s}{c} kWh por día",
                     a=n(entra), f=fuente_txt, b=n(sale), s="+" if entra >= sale else "−",
-                    c=n(abs(entra - sale) * 24, 0)), 15, "rojo" if sale > entra else "texto", 468, 534, 416)
+                    c=n(abs(entra - sale) * 24, 0)), c_f(15), "rojo" if sale > entra else "texto",
+                  CEN_X + c_x(16), CEN_Y + c_y(468), c_x(416))
+
         # reporte
-        self.caja((908, 66, 356, 520), "panel")
-        self.pix(t("tab.rep", "Reporte de hoy"), 16, "oro", 926, 82)
-        yy = 110
+        self.caja((REP_X, REP_Y, r_x(356), r_y(520)), "panel")
+        self.pix(t("tab.rep", "Reporte de hoy"), 14, "oro", REP_X + r_x(18), REP_Y + r_y(50))
+        yy = REP_Y + r_y(60)
         lineas = list(self.reporte) or [t("tab.sin", "Sin novedades. Todo en orden en la base.")]
         if m.pronostico:
             lineas.append(m.pronostico)
         for fr in lineas:
-            yy += self.rico("• " + fr, 17, "naranja" if fr == m.pronostico else "texto", 926, yy, 322) + 8
+            yy += self.rico("• " + fr, 15, "naranja" if fr == m.pronostico else "texto",
+                            REP_X + r_x(18), yy+10, r_x(322)) + r_f(8)
         refugio = {0.3: t("ref.agua", "tanques de agua"), 0.6: t("ref.plantas", "invernadero"),
                    1.0: t("ref.nada", "sin refugio")}.get(e.refugio, "")
         info = [t("tab.ref", "Refugio del dormitorio: {r}", r=refugio)]
@@ -580,13 +609,14 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
             info.append(t("tab.racion", "Comida racionada al 75 %"))
         if e.enfermo:
             info.append(t("tab.enfermo", "Un tripulante está enfermo"))
-        yy = 470
-        for s in info:
-            self.txt(s, 16, "gris", 926, yy)
-            yy += 24
+        yy = REP_Y + r_y(404)
+        for linea in info:
+            self.txt(linea, 15, "gris", REP_X + r_x(18), yy-10)
+            yy += r_y(24)
         self.txt(t("tab.aciertos", "Buenas decisiones: {a} de {t}", a=e.aciertos, t=e.aciertos + e.errores),
-                 16, "verde", 926, yy)
-        # acción principal
+                 14, "verde", REP_X + r_x(18), yy)
+
+        # acción principal 
         if interactivo:
             if m.decision:
                 txt = t("tab.ir_dec", "Ver la decisión del día  →")
@@ -594,11 +624,9 @@ class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
                     txt = t("tab.ir_evento", "¡Atención! {e}  →", e=m.decision.titulo)
             else:
                 txt = t("tab.ir_tarea", "Día tranquilo: ir a la tarea  →")
-            self.boton((W // 2 - 260, 604, 520, 60), txt, self.ir_decision,
+            self.boton((BUT_X, BUT_Y, BUT_W, BUT_H), txt, self.ir_decision,
                        "rojo" if (m.decision and m.decision.evento) else "panel2",
                        tecla=[pygame.K_RETURN, pygame.K_SPACE], tam=24, pixel_=True)
-            self.txt(t("tab.ayuda", "ENTER para seguir · F11 pantalla completa"), 15, "gris2", W // 2, 684, centro=True)
-
     # ── la base dibujada ────────────────────────────────────────────────────────────────
     def _escena(self, r):
         """La vista de la base, en pixel art (se dibuja en escenas/escena_pixel.py)."""
