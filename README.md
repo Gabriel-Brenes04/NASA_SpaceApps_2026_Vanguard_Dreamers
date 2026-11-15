@@ -18,7 +18,7 @@ energy, food, radiation dose and crew morale**. Every day brings a decision, and
   one lasts 14 days: the last 7 of sunlight and the first 7 of night.
 - **19 different decisions.** Their numbers come from the state of the base at that moment.
 - **Explained afterwards.** After each decision the game shows the math, so the player sees why the best  option is the best.
-- **Seven daily tasks**: harvest, oxygen leaks, radiation sweep, ice drilling, crew break, cargo stowing and solar panels.
+- **Eight daily tasks**: harvest, oxygen leaks, radiation sweep, ice drilling, crew break, cargo stowing and solar panels.
 - **English and Spanish.** Switch the language on the title screen.
 - **Challenge resources.** DONKI (space weather), RadLab/OSDR (dose units), APOD (menu backgrounds) and CSA pages (food, exercise). Round **?** buttons open fun facts in the menu, the central panel and under each task.
 - **Real space weather from NASA DONKI.** Every solar storm in the game is inspired on a real flare recorded by NASA.
