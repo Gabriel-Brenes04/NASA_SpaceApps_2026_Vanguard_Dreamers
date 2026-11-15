@@ -20,7 +20,7 @@ import pygame
 
 from .base import ZONA, COLORES
 from ._kit import Partida
-from ..assets import clima
+from ..logica import clima
 from ..assets import sonido
 from ..assets.textos import t
 

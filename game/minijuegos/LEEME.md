@@ -11,7 +11,7 @@ Lo bien que te vaya cambia cuánto rinde la tarea: de 0,4 (muy mal) a 1,3 (perfe
 | `hielo.py` | `hielo` | agua | Llevar el vehículo por un suelo con lomitas y cráteres, perforar y soltar dentro de las bolsas de hielo; desde el nivel 3, radar (38 s) |
 | `recreo.py` | `recreo` | ánimo | Tomarle fotos a la Tierra con zoom (apretar y soltar): relámpagos, auroras, huracanes, cometas, naves y encargos (hasta Costa Rica) (40 s) |
 | `estiba.py` | `estiba` | más carga del cohete | Soltar las bolsas en su sección (3 × 6) sin dejar huecos; se pueden cambiar por las de la cinta; las secciones llenas se sellan (solo el día que llega el cohete) (45 s) |
-| `huerto.py` | `cosecha` | comida | Regar con la regadera (clic apretado) y llenarla en la llave del agua reciclada; cosechar las plantas que brillan antes de que se pasen; calor en el domo, plantas doradas y más macetas al subir de nivel (40 s) |
+| `huerta.py` | `cosecha` | comida | Arrastrar gotas del tanque de agua reciclada a las plantas con sed; las bien regadas dan tomates; en las alertas solares (fulguraciones reales de NASA DONKI) hay que prender el escudo (40 s). Hecho por Juan David. La versión anterior quedó guardada como `_huerto.py` |
 
 Los paneles (`solaris/`) y el barrido de radiación (`barrido_orbital/`) los hizo el resto del equipo.
 

@@ -5,7 +5,7 @@ Para AGREGAR uno no hay que tocar este archivo: basta con crear `mi_juego.py` en
 clase que herede de `Microjuego` y diga qué `tarea` reemplaza. Este archivo los encuentra solo.
 Los archivos que empiezan con «_» (como _plantilla.py) no se cargan.
 
-    from base_lunar.microjuegos import REGISTRO, para_tarea
+    from game.minijuegos import REGISTRO, para_tarea
     clase = para_tarea("cosecha")      # None si nadie hizo todavía el de esa tarea
 """
 import importlib
@@ -17,7 +17,7 @@ REGISTRO = {}       # tarea -> clase
 ERRORES = {}        # módulo -> error (un microjuego roto no tumba el juego)
 
 # Si el .exe no deja listar la carpeta, se usan estos nombres (agregar aquí los nuevos también).
-CONOCIDOS = ["recreo", "huerto", "paneles", "escudo", "oxigeno", "hielo", "estiba", "radiacion"]
+CONOCIDOS = ["recreo", "huerta", "paneles", "escudo", "oxigeno", "hielo", "estiba", "radiacion"]
 
 
 def _cargar(nombre):
