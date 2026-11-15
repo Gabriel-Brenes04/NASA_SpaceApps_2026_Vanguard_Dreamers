@@ -19,6 +19,7 @@ from ..assets import sonido
 from ..assets.textos import t, n
 from ..assets.texto_mate import componer, fuente, fuente_pixel, pixel
 from ..assets.constantes import *
+from ..minijuegos.barrido_orbital.main import main as iniciar_barrido
 
 
 
@@ -95,6 +96,19 @@ class Juego(MenuInicial):
     SIN_JUGAR = 0.9                    # rendimiento si se salta un microjuego que sí existe
 
     def elegir_tarea(self, tid):
+        if tid == "regolito":
+            if self.jugar_micro:
+                tamano = self.ventana.get_size()
+                try:
+                    iniciar_barrido(cerrar_pygame=False)
+                finally:
+                    if self.pantalla_completa:
+                        self.ventana = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                    else:
+                        self.ventana = pygame.display.set_mode(tamano, pygame.RESIZABLE)
+                    pygame.display.set_caption("Mission Survival")
+            self.hacer_tarea(tid, 1.0)
+            return
         clase = minijuegos.para_tarea(tid)
         if clase and self.jugar_micro:
             semilla = self.m.semilla * 100 + self.m.e.dia

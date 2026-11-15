@@ -29,7 +29,7 @@ class MenuInicial:
                 pygame.draw.ellipse(self.lienzo, (96, 98, 108), (cx - rx, cy - rx // 4, rx * 2, rx // 2))
 
         # encabezado: nombre y subtítulos
-        self._typewriter(t("tit.nombre", "Mission Survival"), "oro", 48, W // 2, 116)
+        self._typewriter(t("tit.nombre", "Base Lunar"), "oro", 48, W // 2, 116)
         self._texto(t("tit.sub", "Simulador de misión para astronautas junior"), "texto", 16, W // 2, 180, centro=True)
         self._texto(t("tit.sub2", "La misión depende de ti... Toma decisiones que importan."), "gris", 12, W // 2, 220, centro=True)
 
@@ -107,7 +107,7 @@ class MenuInicial:
         # dos misiones, una al lado de la otra
         for i, (modo, titulo, detalle, color) in enumerate((
                 ("corta", t("tit.corta", "Demo"), t("tit.corta_d", "14 días · Misión corta"), "panel"),
-                ("completa", t("tit.completa", "Misión completa"),
+                ("completa", t("tit.completa", "Mission Survival"),
                 t("tit.completa_d", "28 días · Un día lunar entero"), "panel2"))):
             self._boton_doble((W // 2 - 300 + i * 310, y, 290, 84), titulo, detalle,
                             lambda mm=modo: self.nueva_mision(modo=mm), color,
