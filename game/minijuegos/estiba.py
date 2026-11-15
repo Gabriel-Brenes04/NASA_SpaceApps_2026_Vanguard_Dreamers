@@ -32,13 +32,8 @@ import pygame
 
 from .base import ZONA, COLORES
 from ._kit import Partida, luz, degradado, guardado, texto, mezclar, translucido, estrella
-<<<<<<< HEAD:base_lunar/microjuegos/estiba.py
-from .. import sonido
-from ..textos import t, n
-=======
 from ..assets import sonido
 from ..assets.textos import t, n
->>>>>>> datos:game/minijuegos/estiba.py
 
 CELDA, ANCHO_SEC, FILAS = 50, 3, 6
 ORDEN = ("agua", "comida", "o2", "repuestos")
@@ -70,11 +65,7 @@ def _icono(sup, tipo, cx, cy, color, fondo, esc=1.0):
         pygame.draw.line(sup, color, (cx, cy - 8 * esc), (cx + 2 * esc, cy - 15 * esc), max(1, int(3 * esc)))
         pygame.draw.ellipse(sup, color, (cx + 3 * esc, cy - 17 * esc, 10 * esc, 6 * esc))
     elif tipo == "o2":
-<<<<<<< HEAD:base_lunar/microjuegos/estiba.py
-        from ..texto_mate import fuente
-=======
         from ..assets.texto_mate import fuente
->>>>>>> datos:game/minijuegos/estiba.py
         img = fuente(max(10, int(22 * esc)), True).render("O₂", True, color[:3])
         if len(color) > 3:
             img.set_alpha(color[3])

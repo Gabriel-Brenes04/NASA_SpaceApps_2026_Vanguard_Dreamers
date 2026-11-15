@@ -25,13 +25,8 @@ import math
 import pygame
 
 from .base import Microjuego, ZONA, COLORES
-<<<<<<< HEAD:base_lunar/microjuegos/_kit.py
-from ..textos import t, n
-from .. import sonido
-=======
 from ..assets.textos import t, n
 from ..assets import sonido
->>>>>>> datos:game/minijuegos/_kit.py
 
 BLANCO = (255, 255, 255)
 
@@ -119,11 +114,7 @@ def esquinas(radio=16):
 def texto(s, tam, color, negrita=True, sombra=True, pixel_=False):
     """Un texto ya dibujado (con sombra), guardado para no rehacerlo."""
     def hacer():
-<<<<<<< HEAD:base_lunar/microjuegos/_kit.py
-        from ..texto_mate import fuente, fuente_pixel, pixel
-=======
         from ..assets.texto_mate import fuente, fuente_pixel, pixel
->>>>>>> datos:game/minijuegos/_kit.py
         f = fuente_pixel(tam) if pixel_ else fuente(tam, negrita)
         txt = pixel(s) if pixel_ else s
         img = f.render(txt, not pixel_, color)
@@ -531,11 +522,7 @@ class Partida(Microjuego):
         pygame.draw.rect(lienzo, self.COLOR, caja, 3, border_radius=22)
         img = texto(self.titulo, 24, self.COLOR, pixel_=True)
         lienzo.blit(img, img.get_rect(midtop=(caja.centerx, caja.top + 26)))
-<<<<<<< HEAD:base_lunar/microjuegos/_kit.py
-        from ..texto_mate import componer
-=======
         from ..assets.texto_mate import componer
->>>>>>> datos:game/minijuegos/_kit.py
         img = componer(self.instruccion, 28, g["texto"], caja.w - 80, True, "centro")
         lienzo.blit(img, img.get_rect(midtop=(caja.centerx, caja.top + 70)))
         y = caja.top + 82 + img.get_height() + 14

@@ -30,13 +30,8 @@ def tarea_experta(m):
     e = m.e
     if "estiba" in ts:
         return "estiba"
-<<<<<<< HEAD:tools/simular_misiones.py
-    if "regolito" in ts and e.regolito < 2 and e.dia <= e.luz - 2 and e.energia > 150:
-        return "regolito"
-=======
     if "radiacion" in ts and e.barrido < 0.2 and e.dia <= e.luz and e.energia > 150:
         return "radiacion"
->>>>>>> datos:game/tools/simular_misiones.py
     if "paneles" in ts and e.energia < 250:
         return "paneles"
     if e.animo < 40 and "recreo" in ts:

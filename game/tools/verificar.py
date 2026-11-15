@@ -134,21 +134,13 @@ def main():
                 f"misión {modo}, {tipo}: gana {pct:.0f} % (se espera {minimo}–{maximo} %)")
 
     print("5a. Clima espacial real (NASA DONKI)")
-<<<<<<< HEAD:tools/verificar.py
-    from base_lunar import clima
-=======
     from game.logica import clima
->>>>>>> datos:game/tools/verificar.py
     d = clima.datos()
     ev = d.get("eventos", [])
     x = [e for e in ev if e.get("clase", "").startswith("X")]
     mm = [e for e in ev if e.get("clase", "").startswith("M")]
     if not x or not mm:
-<<<<<<< HEAD:tools/verificar.py
-        falla("base_lunar/datos/donki.json no tiene fulguraciones X y M (correr tools/bajar_donki.py)")
-=======
         falla("game/data/donki.json no tiene fulguraciones X y M (correr tools/bajar_donki.py)")
->>>>>>> datos:game/tools/verificar.py
     elif any(not (e.get("pico") and e.get("enlace", "").startswith("https://")) for e in ev):
         falla("hay eventos de DONKI sin fecha o sin enlace")
     else:
@@ -176,11 +168,7 @@ def main():
         falla(f"inglés: faltan {len(faltan)} textos y {len(malas)} tienen llaves distintas (python tools/textos.py revisar)")
     else:
         ok(f"{len(claves)} textos traducidos con las mismas llaves")
-<<<<<<< HEAD:tools/verificar.py
-    from base_lunar import textos as TX
-=======
     from game.assets import textos as TX
->>>>>>> datos:game/tools/verificar.py
     TX.poner_idioma("en")
     try:
         for semilla in range(30):

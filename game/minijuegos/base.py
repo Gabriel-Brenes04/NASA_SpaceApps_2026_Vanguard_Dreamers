@@ -108,10 +108,6 @@ class Microjuego:
         col = COLORES["verde"] if frac > 0.4 else COLORES["naranja"] if frac > 0.2 else COLORES["rojo"]
         if frac > 0:
             pygame.draw.rect(lienzo, col, (barra.x, barra.y, int(barra.w * frac), barra.h), border_radius=9)
-<<<<<<< HEAD:base_lunar/microjuegos/base.py
-        from ..textos import n
-=======
         from ..assets.textos import n
->>>>>>> datos:game/minijuegos/base.py
         img = fuente_pixel(16).render(f"{n(self.restante(), 1)} s", False, COLORES["texto"])
         lienzo.blit(img, (barra.right + 10, barra.y + 1))

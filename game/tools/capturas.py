@@ -109,11 +109,7 @@ def main():
     args = sys.argv[1:]
     carpeta = args[args.index("--salida") + 1] if "--salida" in args else os.path.join(RAIZ, "_capturas")
     if "--en" in args:
-<<<<<<< HEAD:tools/capturas.py
-        from base_lunar import textos
-=======
         from game.assets import textos
->>>>>>> datos:game/tools/capturas.py
         textos.poner_idioma("en")
         if "--salida" not in args:
             carpeta = os.path.join(RAIZ, "_capturas", "en")

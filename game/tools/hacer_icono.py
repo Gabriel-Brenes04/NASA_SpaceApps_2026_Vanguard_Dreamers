@@ -12,13 +12,8 @@ import sys
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame  # noqa: E402
 
-<<<<<<< HEAD:tools/hacer_icono.py
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from base_lunar.icono import dibujar  # noqa: E402
-=======
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from game.assets.icono import dibujar  # noqa: E402
->>>>>>> datos:game/tools/hacer_icono.py
 
 
 def main():

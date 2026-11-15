@@ -23,11 +23,7 @@ from game.assets.texto_mate import fuente  # noqa: E402
 
 
 def cargar(nombre):
-<<<<<<< HEAD:tools/probar_microjuego.py
-    mod = importlib.import_module(f"base_lunar.microjuegos.{nombre}")
-=======
     mod = importlib.import_module(f"game.minijuegos.{nombre}")
->>>>>>> datos:game/tools/probar_microjuego.py
     clases = [v for v in vars(mod).values() if isinstance(v, type) and issubclass(v, Microjuego) and v is not Microjuego]
     propias = [v for v in clases if getattr(v, "tarea", None) and v.__module__ == mod.__name__]
     for v in propias or clases:          # la del archivo, no una clase base importada (como Partida)
@@ -42,11 +38,7 @@ def main():
     auto = sys.argv[sys.argv.index("--auto") + 1] if "--auto" in sys.argv else None
     clase = cargar(nombre)
     pygame.init()
-<<<<<<< HEAD:tools/probar_microjuego.py
-    from base_lunar import sonido
-=======
     from game.assets import sonido
->>>>>>> datos:game/tools/probar_microjuego.py
     sonido.iniciar()
     pygame.display.set_caption(f"Probando: {clase.titulo}")
     ventana = pygame.display.set_mode((1280, 720))

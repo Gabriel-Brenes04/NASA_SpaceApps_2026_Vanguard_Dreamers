@@ -21,13 +21,8 @@ import pygame
 
 from .base import ZONA, COLORES
 from ._kit import Partida, luz, degradado, guardado, texto, mezclar, vineta, translucido
-<<<<<<< HEAD:base_lunar/microjuegos/oxigeno.py
-from .. import sonido, textos
-from ..textos import t, n
-=======
 from ..assets import sonido, textos
 from ..assets.textos import t, n
->>>>>>> datos:game/minijuegos/oxigeno.py
 
 TANQUE_AGUA = pygame.Rect(108, 292, 152, 278)
 CELDAS = pygame.Rect(500, 285, 280, 165)
@@ -78,11 +73,7 @@ def _tubo(s, pts, tinte, ox=0, oy=0):
 
 def _fondo():
     """Todo lo que no se mueve: pared, piso, tuberías, carcasas y letreros (se dibuja una sola vez)."""
-<<<<<<< HEAD:base_lunar/microjuegos/oxigeno.py
-    from ..texto_mate import fuente
-=======
     from ..assets.texto_mate import fuente
->>>>>>> datos:game/minijuegos/oxigeno.py
     s = pygame.Surface(ZONA.size)
     ox, oy = ZONA.topleft
     s.blit(degradado(ZONA.w, ZONA.h, (30, 37, 62), (13, 16, 30)), (0, 0))

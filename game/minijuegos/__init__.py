@@ -17,11 +17,7 @@ REGISTRO = {}       # tarea -> clase
 ERRORES = {}        # módulo -> error (un microjuego roto no tumba el juego)
 
 # Si el .exe no deja listar la carpeta, se usan estos nombres (agregar aquí los nuevos también).
-<<<<<<< HEAD:base_lunar/microjuegos/__init__.py
-CONOCIDOS = ["recreo", "huerto", "paneles", "escudo", "oxigeno", "hielo", "estiba"]
-=======
 CONOCIDOS = ["recreo", "huerto", "paneles", "escudo", "oxigeno", "hielo", "estiba", "radiacion"]
->>>>>>> datos:game/minijuegos/__init__.py
 
 
 def _cargar(nombre):

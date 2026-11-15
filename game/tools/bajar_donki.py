@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """Baja de DONKI (la base de clima espacial de la NASA) las fulguraciones y los eventos de partículas
-<<<<<<< HEAD:tools/bajar_donki.py
-reales, y guarda una selección dentro del juego: base_lunar/datos/donki.json.
-=======
 reales, y guarda una selección dentro del juego: game/data/donki.json.
->>>>>>> datos:game/tools/bajar_donki.py
 
     python tools/bajar_donki.py              (desde enero de 2024 hasta hoy)
     python tools/bajar_donki.py 2023-01      (desde otro mes)
@@ -23,11 +19,7 @@ import urllib.request
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API = "https://ccmc.gsfc.nasa.gov/DONKI-API/get/{tipo}?startDate={ini}&endDate={fin}"
-<<<<<<< HEAD:tools/bajar_donki.py
-SALIDA = os.path.join(RAIZ, "base_lunar", "datos", "donki.json")
-=======
 SALIDA = os.path.join(RAIZ, "data", "donki.json")
->>>>>>> datos:game/tools/bajar_donki.py
 
 
 def pedir(tipo, ini, fin):

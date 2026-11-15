@@ -129,11 +129,11 @@ class MenuInicial:
         self._boton_simple((W - 150, 20, 130, 45), t("tit.salir", "Salir"),
                     self._salir, "panel")
         y += 64
-        if textos.EN:
-            otro = "en" if textos.IDIOMA == "es" else "es"
-            self._boton_simple((W // 2 - 190, y, 380, 52),
-                            "English" if otro == "en" else "Español",
-                            lambda: textos.poner_idioma(otro))
+        # if textos.EN:
+        #     otro = "en" if textos.IDIOMA == "es" else "es"
+        #     self._boton_simple((W // 2 - 190, y, 380, 52),
+        #                     "English" if otro == "en" else "Español",
+        #                     lambda: textos.poner_idioma(otro))
 
 
 
