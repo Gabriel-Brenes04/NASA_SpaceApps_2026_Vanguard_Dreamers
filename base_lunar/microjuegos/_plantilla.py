@@ -10,7 +10,7 @@ No hace falta tocar ningún otro archivo: el juego lo encuentra solo.
 
 Reglas para que todo encaje:
   · Solo pygame-ce (nada de otras librerías). Solo el RATÓN.
-  · Dura entre 5 y 10 segundos (`duracion`).
+  · Dura entre 5 y 45 segundos (`duracion`).
   · Se dibuja dentro de ZONA (x 40 a 1240, y 110 a 680). Arriba va el título y el reloj.
   · Nada de imágenes, sonidos ni letras bajadas de internet, salvo que tengan licencia libre y se
     anote en CREDITOS.md. Lo más seguro: dibujar con pygame.draw (rect, circle, line, polygon).

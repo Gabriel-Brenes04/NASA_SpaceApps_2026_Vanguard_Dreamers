@@ -28,9 +28,26 @@ power of each device, greenhouse yield) are simplifications and are not presente
 | Oxígeno por electrólisis · Oxygen by electrolysis | se parte agua con electricidad | El generador de O₂ | [NASA ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/) |
 | Panel inclinado · Tilted panel | la potencia baja con el coseno del ángulo | «El panel se torció» | [NASA Small Spacecraft, Power](https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems/) |
 | Hielo en los polos · Polar water ice | confirmado por LCROSS (2009) | Excursión al cráter | [NASA Ames 10-89AR](https://www.nasa.gov/centers/ames/news/releases/2010/10-89AR.html) |
+| Hielo en la superficie · Surface ice in shadowed craters | el instrumento M3 de la NASA confirmó en 2018 hielo de agua en varias zonas en sombra permanente | Microjuego del hielo (escarcha en el fondo de los cráteres) | [NASA Science, Moon Water and Ices](https://science.nasa.gov/moon/moon-water-and-ices/) |
+| Bolsas de carga · Cargo Transfer Bags | tamaños fijos: media, sencilla (≈ 50 × 42 × 25 cm), doble y triple | Microjuego de la estiba | [Baccus, Broyan y Borrego, NASA JSC (2016), pág. 2](https://ntrs.nasa.gov/citations/20160002631) |
 | Gravedad · Surface gravity | 1,62 m/s² (Tierra: 9,80) | ¿Se puede cargar la caja? | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Distancia Tierra–Luna · Earth–Moon distance | 384 400 km | Retraso de la llamada | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| Distancia Tierra–Luna · Earth–Moon distance | 384 400 km | Retraso de la llamada; microjuego del recreo | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| Tamaño de la Tierra y la Luna · Earth and Moon size | 12 742 km y 3 475 km de ancho (radios medios 6371,0 y 1737,4 km): la Tierra es unas 3,7 veces más ancha | Microjuego del recreo | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| Fulguraciones reales · Real solar flares | 1941 fulguraciones (2024-01 a 2026-11); 243 guardadas en el juego (85 clase X, 54 con partículas) | Cada tormenta del juego se basa en una real (clase y fecha); la decisión del blindaje muestra el Sol real, en vivo si hay internet | [NASA CCMC DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) · API: `https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR` y `/get/SEP` |
+| Escala de las fulguraciones · Flare classes | una X es 10 veces una M y 100 veces una C | Explicación de la tormenta | [NASA Science, Solar Storms and Flares](https://science.nasa.gov/sun/solar-storms-and-flares/) |
 | Dosis medida por Chang'e-4 · Measured dose | 1,37 mSv por día | Solo contexto (**no es de la NASA**) | Zhang et al., *Science Advances* 6, eaaz1334 (2020) |
+
+## Por qué DONKI · Why DONKI
+
+El reto pide conectar las decisiones de radiación con el clima espacial real. Por eso las tormentas solares del
+juego salen de fulguraciones reales registradas por la oficina Moon to Mars Space Weather Analysis de la NASA, y
+la decisión de cubrir el hábitat muestra qué está haciendo el Sol de verdad. Los datos guardados se bajan con
+`python tools/bajar_donki.py` y el juego siempre dice si lo que muestra es **en vivo** o **guardado**. Las dosis
+de las tormentas en el juego son simplificaciones: DONKI registra los eventos, no la dosis en la Luna.
+
+The challenge asks to link radiation decisions to real space weather, so every in-game solar storm comes from a
+real flare recorded by NASA's Moon to Mars Space Weather Analysis Office, and the shielding decision shows the
+real Sun. The game always says whether that information is **live** or **saved**.
 
 ## Química y física (no son «datos de la NASA») · Chemistry and physics
 

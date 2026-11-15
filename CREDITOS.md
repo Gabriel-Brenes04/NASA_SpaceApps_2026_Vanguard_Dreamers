@@ -13,6 +13,12 @@ This game is **not affiliated with or endorsed by NASA** and does not use NASA l
 real data it uses come from public NASA pages, each with its source in `base_lunar/datos_nasa.py` and on
 the in-game "NASA data" screen.
 
+## Datos de clima espacial · Space weather data
+
+Fulguraciones y eventos de partículas: **NASA Community Coordinated Modeling Center (CCMC), DONKI**, con los
+análisis de la Moon to Mars Space Weather Analysis Office. Solar flares and particle events: NASA CCMC DONKI.
+https://ccmc.gsfc.nasa.gov/tools/DONKI/
+
 ## Letra · Font
 
 **Press Start 2P**, de/by CodeMan38 (Cody "CodeMan38" Boisclair).

@@ -14,7 +14,7 @@ import pygame
 
 from . import datos_nasa as N
 from . import simulador as S
-from . import microjuegos, sonido, textos
+from . import clima, microjuegos, sonido, textos
 from .textos import t, n
 from .texto_mate import componer, fuente, fuente_pixel, pixel
 
@@ -66,9 +66,15 @@ class Juego:
         self.con_ventana = ventana
         if ventana:
             pygame.display.set_caption("Base Lunar")
+            try:
+                from .icono import dibujar as _icono
+                pygame.display.set_icon(_icono(64))
+            except Exception:
+                pass
             info = pygame.display.Info()
             esc = min(1.0, (info.current_w - 80) / W, (info.current_h - 120) / H) if info.current_w > 0 else 1.0
             self.ventana = pygame.display.set_mode((int(W * esc), int(H * esc)), pygame.RESIZABLE)
+            clima.pedir_en_vivo()         # el Sol real de los últimos 30 días (si hay internet)
             sonido.iniciar()
         self.lienzo = pygame.Surface((W, H))
         self.reloj = pygame.time.Clock()
@@ -101,6 +107,9 @@ class Juego:
             self.hacer_tarea(tid, self.SIN_JUGAR if clase else 1.0)
 
     def terminar_micro(self, saltado=False):
+        sonido.parar_bucles()
+        if saltado and getattr(self.mj, "etapa", None) == "final":
+            saltado = False                # ESC en la tarjeta final: vale lo que ya se jugó
         r = self.SIN_JUGAR if saltado else self.mj.rendimiento_seguro()
         tid = self.mj_tid
         self.mj, self.mj_tid = None, None
@@ -177,9 +186,12 @@ class Juego:
         return [(90, ("foto", "1_titulo")), (5, (K, pygame.K_RETURN)), (60, ("foto", "2_tablero")),
                 (5, (K, pygame.K_RETURN)), (30, (K, pygame.K_1)), (30, ("foto", "3_resultado")),
                 (5, (K, pygame.K_RETURN)), (30, ("foto", "4_tarea")), (5, (K, pygame.K_1)),
-                (30, (K, pygame.K_RETURN)), (30, ("foto", "5_cierre")), (5, (K, pygame.K_RETURN)),
-                (60, ("clic", (533, 485))), (20, ("foto", "6_clic_generador")), (5, ("clic", (533, 485))),
-                (20, ("foto", "7_tablero_dia2")), (5, ("salir", None))]
+                (420, ("foto", "5_microjuego")), (0, ("esperar_micro", None)),        # el microjuego dura ~40 s
+                (30, ("foto", "6_tarea_hecha")),
+                (5, (K, pygame.K_RETURN)), (30, ("foto", "7_cierre")), (5, (K, pygame.K_RETURN)),
+                (60, ("clic", (533, 485))), (20, ("foto", "8_clic_generador")), (5, ("clic", (533, 485))),
+                (20, ("foto", "9_tablero_dia2")), (5, ("fase", "datos")), (240, ("foto", "10_datos_nasa")),
+                (5, ("salir", None))]
 
     def _paso_autoprueba(self, guion):
         if not guion:
@@ -188,6 +200,8 @@ class Juego:
         if espera > 0:
             guion[0] = (espera - 1, (tipo, dato))
             return True
+        if tipo == "esperar_micro" and self.fase == "micro":
+            return True                    # espera a que el microjuego termine solo
         guion.pop(0)
         carpeta = os.environ["MISION_AUTOPRUEBA"]
         if tipo == "foto":
@@ -197,7 +211,16 @@ class Juego:
             esc, ox, oy = self._geom()
             pos = (int(ox + dato[0] * esc), int(oy + dato[1] * esc))
             pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pos))
+        elif tipo == "fase":
+            self.volver_a, self.fase = self.fase, dato
+        elif tipo == "esperar_micro":
+            pass
         elif tipo == "salir":
+            # deja anotado qué microjuegos encontró (para comprobar que el .exe los trae todos)
+            with open(os.path.join(carpeta, "microjuegos.txt"), "w", encoding="utf-8") as f:
+                f.write("encontrados: " + ", ".join(sorted(microjuegos.REGISTRO)) + chr(10))
+                f.write("con error: " + (", ".join(sorted(microjuegos.ERRORES)) or "ninguno") + chr(10))
+                f.write("sonido: " + ("activo" if sonido.ACTIVO else "apagado (sin numpy o sin tarjeta)") + chr(10))
             return False
         else:
             pygame.event.post(pygame.event.Event(tipo, key=dato, mod=0, unicode="", scancode=0))
@@ -407,8 +430,8 @@ class Juego:
         self.cielo()
         pygame.draw.circle(self.lienzo, (40, 90, 170), (1080, 150), 60)
         pygame.draw.circle(self.lienzo, (60, 150, 90), (1062, 136), 22)
-        pygame.draw.ellipse(self.lienzo, (120, 122, 132), (-200, 520, W + 400, 520))
-        for cx, cy, rx in ((220, 600, 70), (640, 640, 110), (1000, 610, 60)):
+        pygame.draw.ellipse(self.lienzo, (120, 122, 132), (-200, 556, W + 400, 520))
+        for cx, cy, rx in ((220, 628, 70), (640, 662, 110), (1000, 636, 60)):
             pygame.draw.ellipse(self.lienzo, (96, 98, 108), (cx - rx, cy - rx // 4, rx * 2, rx // 2))
         self.pix(t("tit.nombre", "Base Lunar"), 48, "oro", W // 2, 116, centro=True)
         self.txt(t("tit.sub", "Simulador de misión para astronautas junior"), 26, "texto", W // 2, 180, centro=True)
@@ -462,36 +485,59 @@ class Juego:
                                                         "oxígeno, traer hielo, cubrir el hábitat o descansar.")),
             (t("como.4t", "4 · Fin del día"), t("como.4", "La base consume y produce. Mirá qué subió y qué bajó.")),
         ]
-        y = 130
+        # izquierda: los 4 pasos del día · derecha: las palabras nuevas, explicadas
+        y = 116
         for tit, desc in pasos:
-            self.txt(tit, 24, "cian", 200, y, True)
-            y += 34 + self.rico(desc, 21, "texto", 200, y + 32, 880)
-        y += 10
+            self.txt(tit, 20, "cian", 180, y, True)
+            y += 30 + self.rico(desc, 17, "texto", 180, y + 28, 440) + 8
+        self.caja((660, 110, 450, 398), "panel2", borde=None, radio=12)
+        self.txt(t("como.palabras", "Palabras nuevas"), 20, "oro", 680, 124, True)
+        palabras = [
+            t("como.p1", "**mSv (milisievert):** la unidad de la dosis de radiación que recibe el cuerpo."),
+            t("como.p2", "**kW y kWh:** kW es cuánto gasta un aparato encendido; kWh es la energía que se gastó "
+                         "en un rato. 1 kW durante 1 hora = 1 kWh."),
+            t("como.p3", "**Regolito:** el polvo y las piedritas que cubren la Luna. Sirve de escudo."),
+            t("como.p4", "**Fulguración:** una explosión de luz en el Sol. Las más fuertes lanzan partículas "
+                         "peligrosas para los astronautas."),
+            t("como.p5", "**Día lunar:** en la Luna el Sol sale y se pone cada 29,5 días: unas dos semanas de luz "
+                         "y dos de noche."),
+        ]
+        yy = 152
+        for p_txt in palabras:
+            titulo_p, _, resto = p_txt.partition(":** ") if ":** " in p_txt else p_txt.partition("** ")
+            titulo_p = titulo_p.replace("**", "")
+            self.txt(titulo_p + ":", 15, "cian", 680, yy, True)
+            yy += 20 + self.rico(resto.replace("**", ""), 15, "texto", 680, yy + 19, 412) + 5
         self.rico(t("como.gana", "Se gana llegando al último día con la tripulación bien. La misión completa dura "
                                  "28 días: un día lunar entero, 14 de sol y 14 de noche. La corta dura 14: los últimos "
                                  "7 días de sol y los primeros 7 de la noche. Se pierde si se acaba el oxígeno, el agua "
                                  "o la comida, si la radiación pasa el límite de la NASA (250 mSv) o si el ánimo llega "
-                                 "a cero."), 20, "oro", 200, y, 880)
-        self.boton((W // 2 - 120, 600, 240, 52), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
+                                 "a cero."), 17, "oro", 180, max(y, 516), 930)
+        self.boton((W // 2 - 120, 612, 240, 50), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
                    tecla=[pygame.K_RETURN, pygame.K_ESCAPE])
 
     # ── datos de la NASA ────────────────────────────────────────────────────────────────
     def _datos(self):
         self.caja((60, 24, 1160, 672), "panel")
-        self.pix(t("dat.tit", "Los datos reales del juego"), 24, "oro", W // 2, 60, centro=True)
-        y = 92
-        for dato, fuente_txt, _url, es_nasa in N.FUENTES:
-            chip = pygame.Rect(90, y + 2, 92, 26)
-            pygame.draw.rect(self.lienzo, C["azul"] if es_nasa else C["gris2"], chip, border_radius=8)
-            self.txt("NASA" if es_nasa else t("dat.otra", "otra"), 16, "texto", chip.centerx, chip.centery, True,
+        self.pix(t("dat.tit", "Los datos reales del juego"), 24, "oro", W // 2, 56, centro=True)
+        # el clima espacial real (en vivo si hay internet; si no, guardado, y lo dice)
+        y = 82 + self.rico(clima.resumen(), 16, "amarillo", 90, 80, 1100) + 8
+        filas = (len(N.FUENTES) + 1) // 2
+        alto = min(60, (548 - y) // max(1, filas))
+        for i_f, (dato, fuente_txt, _url, es_nasa) in enumerate(N.FUENTES):
+            dato, fuente_txt = t(f"fuente.{i_f}", dato), t(f"fuente.{i_f}.f", fuente_txt)
+            col, fila = divmod(i_f, filas)
+            x0, y0 = 90 + col * 560, y + fila * alto
+            chip = pygame.Rect(x0, y0 + 2, 70, 22)
+            pygame.draw.rect(self.lienzo, C["azul"] if es_nasa else C["gris2"], chip, border_radius=7)
+            self.txt("NASA" if es_nasa else t("dat.otra", "otra"), 14, "texto", chip.centerx, chip.centery, True,
                      centro=True)
-            self.txt(dato, 19, "texto", 198, y, True)
-            self.txt(fuente_txt, 16, "gris", 198, y + 23)
-            y += 39
+            h = self.rico(dato, 16, "texto", x0 + 82, y0, 460, True)
+            self.txt(fuente_txt, 14, "gris", x0 + 82, y0 + h)
         self.rico(t("dat.nota", "Los números de diseño (tamaño de la batería, potencia de cada aparato, lo que "
-                                "rinde el invernadero) son simplificaciones del juego, no datos de la NASA. Este "
-                                "juego no está afiliado a la NASA ni respaldado por ella, y no usa su logo."),
-                  16, "gris", 90, y + 4, 1100)
+                                "rinde el invernadero, dosis de las tormentas) son simplificaciones del juego, no datos "
+                                "de la NASA. Este juego no está afiliado a la NASA ni respaldado por ella, y no usa su "
+                                "logo."), 15, "gris", 90, 560, 1100)
         self.boton((W // 2 - 120, 640, 240, 44), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
                    tecla=[pygame.K_RETURN, pygame.K_ESCAPE], tam=20)
 
@@ -792,16 +838,16 @@ class Juego:
                    lambda: setattr(self, "jugar_micro", not self.jugar_micro),
                    "verde" if self.jugar_micro else "panel2", tam=18)
         colores = {"cosecha": "verde", "oxigeno": "cian", "regolito": "naranja", "hielo": "azul",
-                   "recreo": "rosa", "estiba": "amarillo"}
+                   "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo"}
         for i, tid in enumerate(ts):
             fila, col = divmod(i, 3)
-            r = pygame.Rect(p.x + 40 + col * 312, p.y + 140 + fila * 150, 296, 136)
+            r = pygame.Rect(p.x + 40 + col * 312, p.y + 138 + fila * 170, 296, 162)
             self.boton(r, "", (lambda tt=tid: self.elegir_tarea(tt)), tecla=getattr(pygame, f"K_{i + 1}"))
             pygame.draw.rect(self.lienzo, C[colores[tid]], (r.x + 2, r.y + 2, 10, r.h - 4), border_radius=6)
             self.rico(f"{i + 1} · " + S.tarea_titulo(tid), 20, "texto", r.x + 26, r.y + 16, r.w - 40, True)
             self.rico(S.tarea_detalle(tid), 17, "gris", r.x + 26, r.y + 76, r.w - 40)
             if microjuegos.para_tarea(tid) and self.jugar_micro:
-                chip = pygame.Rect(r.right - 104, r.bottom - 34, 92, 24)
+                chip = pygame.Rect(r.right - 104, r.bottom - 28, 92, 22)
                 pygame.draw.rect(self.lienzo, C["oro"], chip, border_radius=7)
                 self.txt(t("tar.sejuega", "se juega"), 15, "fondo", chip.centerx, chip.centery, True, centro=True)
 

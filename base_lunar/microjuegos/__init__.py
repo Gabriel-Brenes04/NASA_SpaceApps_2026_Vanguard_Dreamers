@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Microjuegos: las tareas del día que se juegan (5 a 10 segundos, solo con el ratón).
+"""Microjuegos: las tareas del día que se juegan (5 a 45 segundos, solo con el ratón).
 
 Para AGREGAR uno no hay que tocar este archivo: basta con crear `mi_juego.py` en esta carpeta con una
 clase que herede de `Microjuego` y diga qué `tarea` reemplaza. Este archivo los encuentra solo.
@@ -17,7 +17,7 @@ REGISTRO = {}       # tarea -> clase
 ERRORES = {}        # módulo -> error (un microjuego roto no tumba el juego)
 
 # Si el .exe no deja listar la carpeta, se usan estos nombres (agregar aquí los nuevos también).
-CONOCIDOS = ["estrellas", "huerto", "paneles", "escudo", "oxigeno"]
+CONOCIDOS = ["recreo", "huerto", "paneles", "escudo", "oxigeno", "hielo", "estiba"]
 
 
 def _cargar(nombre):

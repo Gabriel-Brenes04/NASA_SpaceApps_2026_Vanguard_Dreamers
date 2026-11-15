@@ -170,7 +170,8 @@ class Estado:
 
 
 # ══ Tareas del día (cada una se volverá un minijuego; `r` = rendimiento 0,4 a 1,3) ═══════
-TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba")
+TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba", "paneles")
+PANELES_KWH = 60                 # kWh extra por limpiar y alinear los paneles (parámetro del juego)
 
 
 def tarea_titulo(tid):
@@ -181,6 +182,7 @@ def tarea_titulo(tid):
         "hielo": t("tarea.hielo", "Traer hielo del cráter"),
         "recreo": t("tarea.recreo", "Recreo de la tripulación"),
         "estiba": t("tarea.estiba", "Estiba del cohete de carga"),
+        "paneles": t("tarea.paneles", "Limpiar y alinear los paneles solares"),
     }[tid]
 
 
@@ -192,6 +194,7 @@ def tarea_detalle(tid):
         "hielo": t("tarea.hielo.d", "+15 L de agua · gasta 5 kWh para derretirlo"),
         "recreo": t("tarea.recreo.d", "+12 de ánimo"),
         "estiba": t("tarea.estiba.d", "+15 % de la carga que llegó hoy"),
+        "paneles": t("tarea.paneles.d", "+60 kWh de energía · solo de día"),
     }[tid]
 
 
@@ -255,6 +258,8 @@ class Mision:
             ts.insert(0, "cosecha")
         if e.regolito < 3:
             ts.append("regolito")
+        if e.de_dia():
+            ts.append("paneles")
         if e.carga_hoy:
             ts.append("estiba")
         return ts
@@ -290,6 +295,11 @@ class Mision:
         if tid == "recreo":
             e.animo = min(100, e.animo + 12 * r)
             return [t("tar.recreo", "La tripulación descansó: el ánimo subió.")]
+        if tid == "paneles":
+            kwh = PANELES_KWH * r
+            e.energia += kwh
+            return [t("tar.paneles", "Con los paneles limpios y de frente al Sol entraron {k} kWh más.",
+                      k=n(kwh, 0))]
         if tid == "estiba":
             c = e.carga_hoy
             extra = 0.15 * min(r, 1.0)

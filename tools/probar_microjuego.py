@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Probá UN microjuego solo, sin jugar la misión entera.
 
-    python tools/probar_microjuego.py estrellas
+    python tools/probar_microjuego.py recreo
     python tools/probar_microjuego.py huerto
     python tools/probar_microjuego.py huerto --auto _capturas/micro    (se juega solo y guarda una foto)
 
@@ -24,9 +24,10 @@ from base_lunar.texto_mate import fuente  # noqa: E402
 
 def cargar(nombre):
     mod = importlib.import_module(f"base_lunar.microjuegos.{nombre}")
-    for v in vars(mod).values():
-        if isinstance(v, type) and issubclass(v, Microjuego) and v is not Microjuego:
-            return v
+    clases = [v for v in vars(mod).values() if isinstance(v, type) and issubclass(v, Microjuego) and v is not Microjuego]
+    propias = [v for v in clases if getattr(v, "tarea", None) and v.__module__ == mod.__name__]
+    for v in propias or clases:          # la del archivo, no una clase base importada (como Partida)
+        return v
     raise SystemExit(f"En {nombre}.py no hay ninguna clase que herede de Microjuego.")
 
 
@@ -37,6 +38,8 @@ def main():
     auto = sys.argv[sys.argv.index("--auto") + 1] if "--auto" in sys.argv else None
     clase = cargar(nombre)
     pygame.init()
+    from base_lunar import sonido
+    sonido.iniciar()
     pygame.display.set_caption(f"Probando: {clase.titulo}")
     ventana = pygame.display.set_mode((1280, 720))
     lienzo = pygame.Surface((1280, 720))
@@ -50,6 +53,7 @@ def main():
         eventos = pygame.event.get()
         for ev in eventos:
             if ev.type == pygame.QUIT or (ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE):
+                sonido.parar_bucles(0)
                 pygame.quit()
                 return
             if ev.type == pygame.KEYDOWN and ev.key == pygame.K_RETURN and resultado is not None:
@@ -60,10 +64,11 @@ def main():
             pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pos))
         if resultado is None:
             if mj.paso(eventos, 1 / 60, pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]):
+                sonido.parar_bucles()
                 resultado = mj.rendimiento_seguro()
                 print(f"{clase.titulo}: rendimiento {resultado:.2f}  (0,4 = muy mal · 1,0 = normal · 1,3 = perfecto)")
             mj.dibujar_todo(lienzo, fuente)
-            if auto and cuadro == 180:
+            if auto and cuadro == 600:
                 os.makedirs(auto, exist_ok=True)
                 pygame.image.save(lienzo, os.path.join(auto, f"{nombre}.png"))
         else:

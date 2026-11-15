@@ -6,7 +6,7 @@ Lo que TIENE que poner cada microjuego (ver _plantilla.py):
     instruccion  qué hacer, en una línea                    "Arrastrá el agua a las macetas secas"
     tarea        qué tarea del día reemplaza                "cosecha", "oxigeno", "regolito",
                                                             "hielo", "recreo" o "estiba"
-    duracion     segundos que dura (5 a 10)                 8
+    duracion     segundos que dura (5 a 45)                 8
     iniciar()    arma el juego (en vez de __init__)
     actualizar(eventos, dt)   mueve el juego; dt = segundos desde el cuadro anterior
     dibujar(lienzo)           dibuja en un lienzo de 1280 × 720 (el marco lo pone la base)
@@ -103,10 +103,11 @@ class Microjuego:
         img = fuente(20, False).render(self.instruccion, True, COLORES["texto"])
         lienzo.blit(img, (40, 56))
         frac = self.restante() / self.duracion if self.duracion else 0
-        barra = pygame.Rect(ANCHO - 360, 30, 300, 18)
+        barra = pygame.Rect(ANCHO - 400, 30, 260, 18)
         pygame.draw.rect(lienzo, (36, 42, 72), barra, border_radius=9)
         col = COLORES["verde"] if frac > 0.4 else COLORES["naranja"] if frac > 0.2 else COLORES["rojo"]
         if frac > 0:
             pygame.draw.rect(lienzo, col, (barra.x, barra.y, int(barra.w * frac), barra.h), border_radius=9)
-        img = fuente_pixel(16).render(f"{self.restante():.1f} s", False, COLORES["texto"])
+        from ..textos import n
+        img = fuente_pixel(16).render(f"{n(self.restante(), 1)} s", False, COLORES["texto"])
         lienzo.blit(img, (barra.right + 10, barra.y + 1))
