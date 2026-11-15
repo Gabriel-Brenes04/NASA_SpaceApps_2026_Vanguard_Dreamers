@@ -29,6 +29,8 @@ from ..minijuegos.solaris.main import main as iniciar_solaris
 
 #pantallas
 from ..escenas.titulo import MenuInicial
+from ..escenas.info import PantallasInformacion
+from ..escenas.ayuda import AyudaMixin
 
 
 #acciones
@@ -62,7 +64,7 @@ class Boton:
         self.activo, self.tam, self.negrita, self.tecla = activo, tam, negrita, tecla
 
 
-class Juego(MenuInicial):
+class Juego(MenuInicial, PantallasInformacion, AyudaMixin):
     def __init__(self, ventana=True):
         if ventana and sys.platform == "win32":
             try:
@@ -93,6 +95,7 @@ class Juego(MenuInicial):
         self.cuadro = 0
         self.pantalla_completa = False
         self.jugar_micro = True        # se puede apagar en la pantalla de la tarea
+        self.ayuda = None              # ventana de datos curiosos abierta (ver escenas/ayuda.py)
         self.mj, self.mj_tid = None, None
         self._dt = 1 / 60
 
@@ -261,7 +264,9 @@ class Juego(MenuInicial):
                     elif ev.key == pygame.K_F12:
                         self.guardar_foto()
                     elif ev.key == pygame.K_ESCAPE:
-                        if self.pantalla_completa:
+                        if self.ayuda:
+                            self.ayuda = None
+                        elif self.pantalla_completa:
                             self._alternar_completa()
                         elif self.fase == "titulo":
                             return
@@ -440,57 +445,12 @@ class Juego(MenuInicial):
                 self.oscurecer()
                 {"decision": self._decision, "resultado": self._resultado, "tarea": self._tarea,
                  "tarea_hecha": self._tarea_hecha, "cierre": self._cierre}[f]()
+        if self.ayuda and f != "micro":
+            self._dibujar_ayuda()           # va encima de todo y se queda con los clics
 
     def _abrir(self, fase):
         self.volver_a = self.fase
         self.fase = fase
-
-    # ── cómo se juega ───────────────────────────────────────────────────────────────────
-    def _como(self):
-        self.cielo(brillo=0.5)
-        self.caja((140, 40, 1000, 640), "panel")
-        self.pix(t("como.tit", "Cómo se juega"), 24, "oro", W // 2, 82, centro=True)
-        pasos = [
-            (t("como.1t", "1 · Mañana"), t("como.1", "Mirá los 6 indicadores de la base y el reporte. Podés "
-                                                      "encender o apagar los sistemas con un clic.")),
-            (t("como.2t", "2 · Una decisión"), t("como.2", "Cada día llega un problema con números reales. "
-                                                           "Hacé la cuenta: la mejor opción sale de la matemática.")),
-            (t("como.3t", "3 · Una tarea"), t("como.3", "Escogé en qué trabaja la tripulación: cosechar, hacer "
-                                                        "oxígeno, traer hielo, cubrir el hábitat o descansar.")),
-            (t("como.4t", "4 · Fin del día"), t("como.4", "La base consume y produce. Mirá qué subió y qué bajó.")),
-        ]
-        y = 130
-        for tit, desc in pasos:
-            self.txt(tit, 24, "cian", 200, y, True)
-            y += 34 + self.rico(desc, 21, "texto", 200, y + 32, 880)
-        y += 10
-        self.rico(t("como.gana", "Se gana llegando al último día con la tripulación bien. La misión completa dura "
-                                 "28 días: un día lunar entero, 14 de sol y 14 de noche. La corta dura 14: los últimos "
-                                 "7 días de sol y los primeros 7 de la noche. Se pierde si se acaba el oxígeno, el agua "
-                                 "o la comida, si la radiación pasa el límite de la NASA (250 mSv) o si el ánimo llega "
-                                 "a cero."), 20, "oro", 200, y, 880)
-        self.boton((W // 2 - 120, 600, 240, 52), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
-                   tecla=[pygame.K_RETURN, pygame.K_ESCAPE])
-
-    # ── datos de la NASA ────────────────────────────────────────────────────────────────
-    def _datos(self):
-        self.caja((60, 24, 1160, 672), "panel")
-        self.pix(t("dat.tit", "Los datos reales del juego"), 24, "oro", W // 2, 60, centro=True)
-        y = 92
-        for dato, fuente_txt, _url, es_nasa in N.FUENTES:
-            chip = pygame.Rect(90, y + 2, 92, 26)
-            pygame.draw.rect(self.lienzo, C["azul"] if es_nasa else C["gris2"], chip, border_radius=8)
-            self.txt("NASA" if es_nasa else t("dat.otra", "otra"), 16, "texto", chip.centerx, chip.centery, True,
-                     centro=True)
-            self.txt(dato, 19, "texto", 198, y, True)
-            self.txt(fuente_txt, 16, "gris", 198, y + 23)
-            y += 39
-        self.rico(t("dat.nota", "Los números de diseño (tamaño de la batería, potencia de cada aparato, lo que "
-                                "rinde el invernadero) son simplificaciones del juego, no datos de la NASA. Este "
-                                "juego no está afiliado a la NASA ni respaldado por ella, y no usa su logo."),
-                  16, "gris", 90, y + 4, 1100)
-        self.boton((W // 2 - 120, 640, 240, 44), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
-                   tecla=[pygame.K_RETURN, pygame.K_ESCAPE], tam=20)
 
     # ── el tablero de la base ───────────────────────────────────────────────────────────
     def _tablero(self, interactivo):
@@ -539,7 +499,7 @@ class Juego(MenuInicial):
                 sub = t("ind.energia_d", "{s}{k} kWh por día", s="+" if kwh >= 0 else "−", k=n(abs(kwh), 0))
                 critico = v < 80
             elif k == "dosis":
-                sub = t("ind.dosis_d", "límite de la NASA: 250 · +{d} por día", d=n(e.dosis_diaria(), 2))
+                sub = t("ind.dosis_d", "límite de la misión: 250 · +{d} por día", d=n(e.dosis_diaria(), 2))
                 critico = v > 190
             else:
                 sub = (t("ind.animo_bien", "con ganas") if v >= 60 else t("ind.animo_med", "cansada") if v >= 30
@@ -593,8 +553,11 @@ class Juego(MenuInicial):
             yy += self.rico("• " + fr, 17, "naranja" if fr == m.pronostico else "texto", 926, yy, 322) + 8
         refugio = {0.3: t("ref.agua", "tanques de agua"), 0.6: t("ref.plantas", "invernadero"),
                    1.0: t("ref.nada", "sin refugio")}.get(e.refugio, "")
-        info = [t("tab.reg", "Regolito encima: {m} m", m=n(e.regolito)),
-                t("tab.ref", "Refugio del dormitorio: {r}", r=refugio)]
+        info = [t("tab.ref", "Refugio del dormitorio: {r}", r=refugio)]
+        if e.regolito > 0:
+            info.insert(0, t("tab.reg", "Regolito encima: {m} m", m=n(e.regolito)))
+        if e.barrido > 0:
+            info.insert(0, t("tab.bar", "Barridos de radiación: −{p} % de dosis", p=n(e.barrido * 100, 0)))
         if e.racion < 1:
             info.append(t("tab.racion", "Comida racionada al 75 %"))
         if e.enfermo:
@@ -700,7 +663,9 @@ class Juego(MenuInicial):
 
     # ── decisión del día ────────────────────────────────────────────────────────────────
     def _panel_central(self):
-        return self.caja((140, 34, 1000, 652), "panel")
+        p = self.caja((140, 34, 1000, 652), "panel")
+        self.boton_ayuda(p.right - 34, p.y + 34, "recursos")       # «?»: datos curiosos de los recursos
+        return p
 
     def _decision(self):
         d = self.m.decision
@@ -774,33 +739,43 @@ class Juego(MenuInicial):
     def _tarea(self):
         p = self._panel_central()
         self.pix(t("tar.tit", "Tarea del día"), 24, "oro", p.x + 40, p.y + 30)
-        ts = self.m.tareas_disponibles()
-        if not ts:
+        estado = self.m.tareas_estado()                     # las 7 tareas, siempre; algunas apagadas hoy
+        hay = any(ok for _tid, ok, _mot in estado)
+        if hay:
+            self.rico(t("tar.sub", "Escogé en qué trabaja hoy la tripulación. Las tareas marcadas «se juega» abren un "
+                                   "microjuego de pocos segundos: tu puntaje cambia cuánto rinde."),
+                      19, "gris", p.x + 40, p.y + 70, 640)
+        else:
             self.rico(t("tar.ninguna", "Hoy el trabajo de la tripulación se fue en la reparación. No hay tarea."),
-                      22, "texto", p.x + 40, p.y + 90, 920)
-            self.boton((p.right - 300, p.bottom - 76, 260, 54), t("tar.cerrar", "Terminar el día  →"), self.cerrar,
-                       tecla=[pygame.K_RETURN, pygame.K_SPACE], pixel_=True)
-            return
-        self.rico(t("tar.sub", "Escogé en qué trabaja hoy la tripulación. Las tareas marcadas «se juega» abren un "
-                               "microjuego de pocos segundos: tu puntaje cambia cuánto rinde."),
-                  19, "gris", p.x + 40, p.y + 70, 640)
+                      20, "naranja", p.x + 40, p.y + 70, 640)
         self.boton((p.right - 300, p.y + 66, 260, 44),
                    t("tar.micro_si", "minijuegos: SÍ") if self.jugar_micro else t("tar.micro_no", "minijuegos: NO"),
                    lambda: setattr(self, "jugar_micro", not self.jugar_micro),
                    "verde" if self.jugar_micro else "panel2", tam=18)
         colores = {"cosecha": "verde", "oxigeno": "cian", "radiacion": "naranja", "hielo": "azul",
-           "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo", "regolito": "gris"}
-        for i, tid in enumerate(ts):
+                   "recreo": "rosa", "estiba": "amarillo", "paneles": "amarillo"}
+        for i, (tid, ok, motivo) in enumerate(estado):
             fila, col = divmod(i, 3)
-            r = pygame.Rect(p.x + 40 + col * 312, p.y + 140 + fila * 150, 296, 136)
-            self.boton(r, "", (lambda tt=tid: self.elegir_tarea(tt)), tecla=getattr(pygame, f"K_{i + 1}"))
-            pygame.draw.rect(self.lienzo, C[colores[tid]], (r.x + 2, r.y + 2, 10, r.h - 4), border_radius=6)
-            self.rico(f"{i + 1} · " + S.tarea_titulo(tid), 20, "texto", r.x + 26, r.y + 16, r.w - 40, True)
-            self.rico(S.tarea_detalle(tid), 17, "gris", r.x + 26, r.y + 76, r.w - 40)
-            if (tid in ("paneles", "radiacion") or minijuegos.para_tarea(tid)) and self.jugar_micro:
-                chip = pygame.Rect(r.right - 104, r.bottom - 34, 92, 24)
-                pygame.draw.rect(self.lienzo, C["oro"], chip, border_radius=7)
-                self.txt(t("tar.sejuega", "se juega"), 15, "fondo", chip.centerx, chip.centery, True, centro=True)
+            r = pygame.Rect(p.x + 40 + col * 312, p.y + 126 + fila * 170, 296, 130)
+            self.boton(r, "", (lambda tt=tid: self.elegir_tarea(tt)), activo=ok, tecla=getattr(pygame, f"K_{i + 1}"))
+            pygame.draw.rect(self.lienzo, C[colores[tid]] if ok else C["gris2"], (r.x + 2, r.y + 2, 10, r.h - 4),
+                             border_radius=6)
+            self.rico(f"{i + 1} · " + S.tarea_titulo(tid), 20, "texto" if ok else "gris", r.x + 26, r.y + 12,
+                      r.w - 40, True)
+            if ok:
+                self.rico(S.tarea_detalle(tid), 17, "gris", r.x + 26, r.y + 62, r.w - 40)
+                if (tid in ("paneles", "radiacion") or minijuegos.para_tarea(tid)) and self.jugar_micro:
+                    chip = pygame.Rect(r.right - 104, r.bottom - 32, 92, 24)
+                    pygame.draw.rect(self.lienzo, C["oro"], chip, border_radius=7)
+                    self.txt(t("tar.sejuega", "se juega"), 15, "fondo", chip.centerx, chip.centery, True, centro=True)
+            else:
+                self.rico(t("tar.nohoy", "No se puede hoy: {m}", m=motivo), 17, "naranja", r.x + 26, r.y + 62, r.w - 40)
+            # «?» debajo de cada tarea: explica la tarea y cuenta un dato curioso
+            self.boton_ayuda(r.x + 22, r.bottom + 17, tid, r=13,
+                             etiqueta=t("tar.q", "Sobre esta tarea"))
+        if not hay:
+            self.boton((p.right - 300, p.bottom - 76, 260, 54), t("tar.cerrar", "Terminar el día  →"), self.cerrar,
+                       tecla=[pygame.K_RETURN, pygame.K_SPACE], pixel_=True)
 
     def _tarea_hecha(self):
         tid, frases = self.res_tarea

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Las decisiones de la misión: problemas de matemática reales con consecuencias.
+"""Las decisiones de la misión.
 
 Cada decisión se ARMA con el estado de la base en ese momento (los números cambian de una
 partida a otra) y trae: enunciado, 2 a 4 opciones con su efecto, cuál es la mejor según los
@@ -7,15 +7,20 @@ números, y la explicación con la cuenta. Python puro (sin pygame).
 
 Ideas del equipo integradas: el muro de agua alrededor del dormitorio (arquitecto), el
 reactor que se enciende al caer la noche, y el ángulo del panel solar.
+
+Datos de los recursos del reto que mueven decisiones: DONKI (la fulguración real y su clase escalan
+la tormenta), RadLab (unidades de radiación: µSv/h → mSv por día) y la CSA (calorías de un astronauta,
+ejercicio y pérdida de hueso, agua reciclada, internet lento).
 """
 from . import clima
 from ..data import datos_nasa as N
 from . import simulador as S
 from ..assets.textos import t, n
 
-# ══ Calendario: qué decisión toca cada día ════════════════════════════════════════════════
+# Calendario: qué decisión toca cada día
 UNICAS = ("temperatura", "angulo")          # «llamada» va fija en el calendario
-REPETIBLES = {"racion": 3, "electrolisis": 2, "hielo": 3, "gravedad": 2, "oxigeno": 3}
+REPETIBLES = {"racion": 3, "electrolisis": 2, "hielo": 3, "gravedad": 2, "oxigeno": 3,
+              "dosimetro": 2, "ejercicio": 2}
 
 
 def armar_calendario(rng, e):
@@ -26,7 +31,7 @@ def armar_calendario(rng, e):
         t2 = rng.randint(10, L - 1)
         rangos = (("micrometeorito", (3, L - 2)), ("reabastecimiento", (L + 2, L + 5)),
                   ("reciclador", (L + 3, T - 4)), ("enfermo", (L + 4, T - 2)))
-    else:                          # misión corta: 7 de sol y 7 de noche (todo más seguido)
+    else:                          # misión corta: 7 de sol y 7 de noche 
         t2 = rng.randint(5, L - 1)
         t1 = rng.randint(3, t2 - 2)
         rangos = (("micrometeorito", (3, L - 1)), ("reabastecimiento", (L + 1, L + 3)),
@@ -43,7 +48,7 @@ def armar_calendario(rng, e):
         d = libre(a, b) or libre(3, T - 1)
         if d:
             plan[d] = ident
-    # el retraso de la comunicación (lo pide el reto) sale en TODAS las misiones, una noche
+    # el retraso de la comunicación sale en TODAS las misiones, una noche
     d = libre(L + 1, T - 1) or libre(3, T - 1)
     if d:
         plan[d] = "llamada"
@@ -86,6 +91,8 @@ def elegir_rutina(m):
             continue
         if ident == "oxigeno" and e.de_dia():
             continue
+        if ident == "ejercicio" and e.dia < 3:
+            continue
         if ident == "racion":
             d = e.dias_que_alcanza("comida")
             if e.dia < max(3, e.total // 5) or (e.racion == 1 and (d is None or d > quedan + 4)):
@@ -112,7 +119,7 @@ def _quedan(e):
     return e.total - e.dia + 1
 
 
-# ══ 1 · Arquitecto del hábitat (idea del equipo: el muro de agua) ═════════════════════════
+# 1 · Arquitecto del hábitat
 def _d_arquitecto(m):
     def ef(f, animo=0):
         def _(e):
@@ -126,7 +133,7 @@ def _d_arquitecto(m):
         t("arq.tit", "Arquitecto del hábitat"),
         t("arq.enun", "Alrededor del dormitorio caben 4 módulos. Si llega una tormenta solar, la "
                       "tripulación se encierra ahí. El agua y las plantas tienen mucho hidrógeno, y el "
-                      "hidrógeno frena las partículas del Sol (NASA). En el juego, detrás del agua pasa "
+                      "hidrógeno frena las partículas del Sol. En el juego, detrás del agua pasa "
                       "{{3|10}} de la radiación, detrás de las plantas {{6|10}} y detrás de las "
                       "baterías pasa toda. ¿Qué ponés alrededor del dormitorio?"),
         [S.Opcion(t("arq.a", "Los tanques de agua"), ef(0.3), True),
@@ -134,9 +141,9 @@ def _d_arquitecto(m):
          S.Opcion(t("arq.c", "Las baterías"), ef(1.0))],
         t("arq.exp", "Una tormenta fuerte da 200 mSv. Detrás del agua: 200 × {{3|10}} = 60 mSv. Detrás "
                      "de las plantas: 200 × {{6|10}} = 120 mSv. Detrás de las baterías: 200 mSv. El límite "
-                     "de la NASA es 250 mSv: solo el agua deja margen para una segunda tormenta. La NASA "
+                     "de la misión es 250 mSv: solo el agua deja margen para una segunda tormenta. La NASA "
                      "estudió una «pared de agua» de unos 10 cm alrededor del cuarto de la tripulación."),
-        datos=[t("arq.d1", "Tormenta fuerte: 200 mSv"), t("arq.d2", "Límite de la NASA: 250 mSv")])
+        datos=[t("arq.d1", "Tormenta fuerte: 200 mSv"), t("arq.d2", "Límite de la misión: 250 mSv")])
 
 
 # ══ 2 · Cuánto da el panel solar ══════════════════════════════════════════════════════════
@@ -162,7 +169,7 @@ def _d_panel(m):
     return S.Decision(
         "panel",
         t("pan.tit", "¿Cuánta energía da el panel?"),
-        t("pan.enun", "El panel solar mide 40 m². El Sol da 1361 W por cada m² (NASA) y el panel "
+        t("pan.enun", "El panel solar mide 40 m². El Sol da 1361 W por cada m² y el panel "
                       "convierte el 20 % en electricidad. El soporte vital ya usa 4 kW. ¿Qué más encendés?"),
         [S.Opcion(t("pan.oa", "Generador de O₂, reciclador e invernadero"), a, True),
          S.Opcion(t("pan.ob", "Todo eso y también el calentador del taller"), b),
@@ -201,7 +208,7 @@ def _d_noche(m):
     return S.Decision(
         "noche",
         t("noc.tit", "Mañana cae la noche lunar"),
-        t("noc.enun", "La noche lunar dura unas dos semanas y afuera baja a −173 °C (NASA). A la misión le "
+        t("noc.enun", "La noche lunar dura unas dos semanas y afuera baja a −173 °C. A la misión le "
                       "quedan {n} días de oscuridad. El reactor da 10 kW, como el Kilopower de la NASA. De "
                       "noche el soporte vital con calefacción usa 6 kW. Con todo encendido serían "
                       "6 + 2,5 + 1 + 3 = 12,5 kW. ¿Qué hacés?", n=noche),
@@ -222,10 +229,13 @@ def _d_noche(m):
                t("noc.d2", "Comida: {c} kg · Agua: {a} L · O₂: {o} kg", c=n(e.comida), a=n(e.agua), o=n(e.o2))])
 
 
-# ══ 4 · Tormenta solar: ¿llegan al refugio? ══════════════════════════════════════════════
+# ══ 4 · Tormenta solar: ¿llegan al refugio? (fulguración REAL de DONKI) ═══════════════════
 def _d_tormenta(m, nivel):
     e = m.e
-    msv = S.TORMENTA_MSV[nivel]
+    real = clima.evento_real(m.rng, nivel)          # una fulguración real de DONKI (datos guardados)
+    esc = clima.escala(real) if real else 1.0       # una X9 pega más que una X1
+    base = S.TORMENTA_MSV[nivel]
+    msv = round(base * esc)
     d = m.rng.choice((600, 900, 1200, 1500, 1800, 2100))
     v = m.rng.choice((1.0, 1.2, 1.5))
     aviso = m.rng.choice((15, 20, 25, 30))
@@ -243,14 +253,21 @@ def _d_tormenta(m, nivel):
                       d=n(dosis), tot=n(e.dosis))]
         return _
     volver = adentro if llegan else 0.5 * msv + 0.5 * adentro
-    real = clima.evento_real(m.rng, nivel)          # una fulguración real de DONKI (datos guardados)
-    texto_real = ("\n" + t("tor.real", "Basada en una fulguración real: la {c} del {f}, registrada por la NASA "
-                                       "(DONKI).", c=real["clase"], f=clima.fecha(real["pico"]))) if real else ""
+    texto_real = ""
+    if real:
+        texto_real = "\n" + t("tor.real", "Basada en una fulguración real: la {c} del {f}, registrada por la NASA "
+                                          "(DONKI).", c=real["clase"], f=clima.fecha(real["pico"]))
+        if real.get("region"):
+            texto_real += t("tor.real_reg", " Salió de la región activa {r} del Sol.", r=real["region"])
+        if real.get("particulas"):
+            texto_real += t("tor.real_part", " DONKI anotó que lanzó partículas solares.")
+    escala_real = (" " + t("tor.escala_real", "El juego escala la dosis con la clase real ({c}): {b} × {s} = {m} mSv.",
+                           c=real["clase"], b=base, s=n(esc, 2), m=msv)) if real else ""
     return S.Decision(
         "tormenta",
         t("tor.tit", "¡Fulguración solar!"),
         t("tor.enun", "Una tormenta {niv}: afuera, sin protección, daría {msv} mSv. Las partículas llegan "
-                      "en {a} minutos (la NASA dice que las más rápidas tardan de 15 a 30). Dos tripulantes "
+                      "en {a} minutos (las más rápidas tardan de 15 a 30). Dos tripulantes "
                       "están a {d} m del hábitat y caminan a {v} m/s con el traje. ¿Qué hacen?",
           niv=t("tor." + nivel, nivel), msv=msv, a=aviso, d=n(d, 0), v=n(v)) + texto_real,
         [S.Opcion(t("tor.a", "Volver corriendo al refugio del hábitat"), recibir(volver), llegan),
@@ -258,17 +275,18 @@ def _d_tormenta(m, nivel):
                   not llegan),
          S.Opcion(t("tor.c", "Seguir trabajando: hay que terminar"), recibir(msv, -8))],
         t("tor.exp", "Tiempo para volver: {{{{{d}|{v}}}}} = {s} s, y {s} ÷ 60 = {mi} min. Las partículas "
-                     "llegan en {a} min: {si}. En el hábitat la tormenta da {msv} × {fh} (regolito) × "
+                     "llegan en {a} min: {si}. En el hábitat la tormenta da {msv} × {fh} (blindaje) × "
                      "{fr} (refugio) = {ad} mSv; en el rover pasa {{{{6|10}}}}: {ro} mSv.",
           d=n(d, 0), v=n(v), s=n(seg, 0), mi=n(minutos), a=aviso,
           si=(t("tor.si", "sí alcanzan") if llegan else t("tor.no", "NO alcanzan")),
           msv=msv, fh=n(e.factor_habitat(), 2), fr=n(e.refugio, 1), ad=n(adentro), ro=n(0.6 * msv, 0))
         + "\n" + t("tor.escala", "Las fulguraciones se miden con letras: una X es 10 veces más fuerte que una M y "
-                                 "100 veces más que una C (NASA). Las dosis del juego son una simplificación."),
-        datos=[t("tor.d1", "Límite de la NASA: 250 mSv · Llevan {d}", d=n(e.dosis))], evento=True)
+                                 "100 veces más que una C. Las dosis del juego son una simplificación: DONKI "
+                                 "registra los eventos, no la dosis en la Luna.") + escala_real,
+        datos=[t("tor.d1", "Límite de la misión: 250 mSv · Llevan {d}", d=n(e.dosis))], evento=True)
 
 
-# ══ 5 · Mancha solar: ¿más regolito? ══════════════════════════════════════════════════════
+# 5 · Mancha solar: ¿más regolito?
 def _d_mancha(m):
     e = m.e
     if e.regolito >= 3:
@@ -299,7 +317,7 @@ def _d_mancha(m):
     )
 
 
-# ══ 6 · Se avería el reciclador de agua ═══════════════════════════════════════════════════
+# 6 · Se avería el reciclador de agua 
 def _d_reciclador(m):
     e = m.e
     bruta = e.agua_bruta()
@@ -322,8 +340,9 @@ def _d_reciclador(m):
     return S.Decision(
         "reciclador",
         t("rec.tit", "¡Se averió el reciclador de agua!"),
-        t("rec.enun", "Sin el reciclador, la tripulación gasta 4 × 4,48 = {b} L de agua por día (NASA). Con "
-                      "él, la base recupera el 98 % como la Estación Espacial y solo se pierden {nt} L. "
+        t("rec.enun", "Sin el reciclador, la tripulación gasta 4 × 4,48 = {b} L de agua por día. Con él, "
+                      "la base recupera el 98 % del agua, como la Estación Espacial, que recicla la de la "
+                      "orina, el sudor, el aliento y el lavado (CSA). Solo se pierden {nt} L. "
                       "El repuesto llega en 3 días. Tenés {a} L.", b=n(bruta, 2), nt=n(neta, 2), a=n(e.agua)),
         [S.Opcion(t("rec.oa", "Repararlo hoy: 30 kWh y el trabajo del día"), reparar, True),
          S.Opcion(t("rec.ob", "Esperar el repuesto"), esperar),
@@ -335,7 +354,7 @@ def _d_reciclador(m):
         evento=True)
 
 
-# ══ 7 · Micrometeorito en el panel ════════════════════════════════════════════════════════
+# 7 · Micrometeorito en el panel 
 def _d_micrometeorito(m):
     e = m.e
     k = max(0, e.luz + 1 - e.dia)
@@ -365,7 +384,7 @@ def _d_micrometeorito(m):
         evento=True)
 
 
-# ══ 8 · Un tripulante enfermo ═════════════════════════════════════════════════════════════
+# 8 · Un tripulante enfermo 
 def _d_enfermo(m):
     e = m.e
     horas = m.rng.choice((8, 6))
@@ -405,7 +424,7 @@ def _d_enfermo(m):
         evento=True)
 
 
-# ══ 9 · Llega el cohete de carga ══════════════════════════════════════════════════════════
+# 9 · Llega el cohete de carga
 def _d_reabastecimiento(m):
     e = m.e
     gasto = {}
@@ -472,7 +491,7 @@ def _d_reabastecimiento(m):
         evento=True)
 
 
-# ══ 10 · ¿Alcanza el oxígeno sin el generador? (de noche) ═════════════════════════════════
+# 10 · ¿Alcanza el oxígeno sin el generador? 
 def _d_oxigeno(m):
     e = m.e
     q = _quedan(e)
@@ -497,7 +516,7 @@ def _d_oxigeno(m):
     return S.Decision(
         "oxigeno",
         t("oxi.tit", "Las cuentas del oxígeno"),
-        t("oxi.enun", "Tenés {o} kg de O₂. Cada tripulante usa 0,816 kg por día (NASA): 4 × 0,816 = {c} kg, "
+        t("oxi.enun", "Tenés {o} kg de O₂. Cada tripulante usa 0,816 kg por día: 4 × 0,816 = {c} kg, "
                       "y las plantas devuelven {p} kg. Faltan {q} días. {preg}",
           o=n(e.o2), c=n(e.consumo_o2(), 3), p=n(S.INV_O2_KG if e.sistemas["invernadero"] else 0, 2),
           q=q, preg=preg),
@@ -508,7 +527,7 @@ def _d_oxigeno(m):
                else t("oxi.no", "No alcanza: el generador tiene que estar encendido."))))
 
 
-# ══ 11 · ¿Racionar la comida? ════════════════════════════════════════════════════════════
+# 11 · ¿Racionar la comida? 
 def _d_racion(m):
     e = m.e
     q = _quedan(e)
@@ -533,16 +552,19 @@ def _d_racion(m):
         "racion",
         t("rac.tit", "¿Alcanza la comida?"),
         t("rac.enun", "Tenés {c} kg de comida y faltan {q} días. La tripulación come 4 × 1,51 = {no} kg por día "
-                      "(NASA) y el invernadero da {p} kg por día.",
+                      "y el invernadero da {p} kg por día.",
           c=n(e.comida), q=q, no=n(normal, 2), p=n(prod)),
         ops,
         t("rac.exp", "Hacen falta {q} × ({no} − {p}) = {ne} kg y tenés {c} kg. {res}",
           q=q, no=n(normal, 2), p=n(prod), ne=n(necesita), c=n(e.comida),
           res=(t("rac.si", "Alcanza: no hace falta racionar.") if alcanza
-               else t("rac.no", "No alcanza: hay que racionar o conseguir más comida."))))
+               else t("rac.no", "No alcanza: hay que racionar o conseguir más comida."))) + " " +
+        t("rac.kcal", "Un astronauta come entre {a} y {b} calorías al día (CSA). Con la comida al 75 % serían de "
+                      "{c} a {d}: se nota en el ánimo.", a=n(N.CSA_KCAL_DIA[0], 0), b=n(N.CSA_KCAL_DIA[1], 0),
+          c=n(0.75 * N.CSA_KCAL_DIA[0], 0), d=n(0.75 * N.CSA_KCAL_DIA[1], 0)))
 
 
-# ══ 12 · Electrólisis: oxígeno a cambio de agua ═══════════════════════════════════════════
+# 12 · Electrólisis: oxígeno a cambio de agua 
 def _d_electrolisis(m):
     e = m.e
     noche_o2 = e.dias_de_noche() * (e.consumo_o2() - S.INV_O2_KG)   # O₂ para la noche sin generador
@@ -570,7 +592,7 @@ def _d_electrolisis(m):
                else t("ele.no", "No conviene hoy: o ya hay oxígeno o el agua está justa."))))
 
 
-# ══ 13 · Hielo del cráter: ¿alcanza la batería del rover? ═════════════════════════════════
+# 13 · Hielo del cráter: ¿alcanza la batería del rover? 
 def _d_hielo(m):
     e = m.e
     cerca = m.rng.choice((4, 5, 6))
@@ -603,7 +625,7 @@ def _d_hielo(m):
           a=cerca, ka=n(3 * cerca, 0), b=lejos, kb=n(3 * lejos, 0)))
 
 
-# ══ 14 · Gravedad: ¿se puede cargar la caja? ══════════════════════════════════════════════
+# 14 · Gravedad: ¿se puede cargar la caja? 
 def _d_gravedad(m):
     e = m.e
     masa = m.rng.choice((90, 120, 150, 180, 210))
@@ -624,7 +646,7 @@ def _d_gravedad(m):
         "gravedad",
         t("gra.tit", "Una caja de {m} kg", m=masa),
         t("gra.enun", "Llegó una caja de repuestos de {m} kg. La gravedad de la Luna es 1,62 m/s² y la de la "
-                      "Tierra 9,80 m/s² (NASA). Un tripulante puede levantar sin peligro lo que en la Tierra "
+                      "Tierra 9,80 m/s². Un tripulante puede levantar sin peligro lo que en la Tierra "
                       "pesaría 25 kg. La grúa gasta 15 kWh. ¿Cómo la mueven?", m=masa),
         [S.Opcion(t("gra.oa", "Cargarla a mano"), mano, puede),
          S.Opcion(t("gra.ob", "Usar la grúa"), grua, not puede)],
@@ -636,7 +658,7 @@ def _d_gravedad(m):
                else t("gra.no", "Es más de 25: hace falta la grúa."))))
 
 
-# ══ 15 · Temperatura: ¿aislar las tuberías? ═══════════════════════════════════════════════
+# 15 · Temperatura: ¿aislar las tuberías?
 def _d_temperatura(m):
     e = m.e
     aguanta = m.rng.choice((250, 280, 320))
@@ -654,7 +676,7 @@ def _d_temperatura(m):
     return S.Decision(
         "temperatura",
         t("tem.tit", "Las tuberías de afuera"),
-        t("tem.enun", "Al sol la superficie llega a 127 °C y en la oscuridad baja a −173 °C (NASA). Las tuberías "
+        t("tem.enun", "Al sol la superficie llega a 127 °C y en la oscuridad baja a −173 °C. Las tuberías "
                       "de afuera aguantan un cambio de hasta {ag} °C. Aislarlas cuesta 25 kWh. ¿Las aíslan?",
           ag=aguanta),
         [S.Opcion(t("tem.oa", "Sí, aislarlas"), aislar, hace_falta),
@@ -665,7 +687,7 @@ def _d_temperatura(m):
                else t("tem.no", "300 < {ag}, aguantan solas.", ag=aguanta))))
 
 
-# ══ 16 · Llamada a la Tierra ══════════════════════════════════════════════════════════════
+# 16 · Llamada a la Tierra
 def _d_llamada(m):
     def ef(bien):
         def _(e):
@@ -681,14 +703,16 @@ def _d_llamada(m):
         "llamada",
         t("lla.tit", "Videollamada con las familias"),
         t("lla.enun", "La señal viaja a la velocidad de la luz: unos 300 000 km por segundo. La Luna está a "
-                      "384 400 km de la Tierra (NASA). Si un astronauta pregunta algo, ¿cuánto tarda en oír "
+                      "384 400 km de la Tierra. Si un astronauta pregunta algo, ¿cuánto tarda en oír "
                       "la respuesta?"),
         ops,
         t("lla.exp", "Ida: {{384 400|300 000}} ≈ 1,3 s. La respuesta también tiene que volver: 1,3 × 2 ≈ 2,6 s. "
-                     "Por eso en la Luna se habla por turnos."))
+                     "Por eso en la Luna se habla por turnos.") + " " +
+        t("lla.csa", "Algo parecido pasa en la Estación Espacial: el internet es muy lento y solo se usa "
+                     "unas pocas veces al día (CSA)."))
 
 
-# ══ 17 · El ángulo del panel (idea del equipo) ════════════════════════════════════════════
+# 17 · El ángulo del panel (idea del equipo)
 def _d_angulo(m):
     e = m.e
     k = max(0, e.luz + 1 - e.dia)
@@ -704,8 +728,8 @@ def _d_angulo(m):
     return S.Decision(
         "angulo",
         t("ang.tit", "El panel se torció"),
-        t("ang.enun", "El polvo que levantó el rover movió el panel y ahora el Sol le llega de lado. La NASA "
-                      "explica que un panel da menos mientras más se inclina: a 60° recibe solo {{{{1|2}}}} de la "
+        t("ang.enun", "El polvo que levantó el rover movió el panel y ahora el Sol le llega de lado. Un panel "
+                      "da menos mientras más se inclina: a 60° recibe solo {{{{1|2}}}} de la "
                       "luz. Alinearlo es una salida que ocupa el trabajo del día. Quedan {k} días de sol.", k=k),
         [S.Opcion(t("ang.oa", "Salir a alinearlo"), alinear, vale),
          S.Opcion(t("ang.ob", "Dejarlo así"), dejar, not vale)],
@@ -714,3 +738,81 @@ def _d_angulo(m):
           k=k, kwh=n(131 * k, 0),
           res=(t("ang.si", "Vale mucho más que un día de trabajo.") if vale
                else t("ang.no", "Ya casi es de noche: no vale la pena salir."))))
+
+
+# 18 · El dosímetro: de µSv por hora a mSv por día (RadLab) 
+def _d_dosimetro(m):
+    e = m.e
+    real = clima.radlab()
+    if real:
+        med = real["mediciones"][0]
+        x = round(med["equivalente_usv_h"])
+        origen = t("dos.real", "El número es real: lo midió {nom} y está en RadLab (datos guardados el {f}).",
+                   nom=med["nombre"], f=clima.fecha(real.get("bajado", "")))
+    else:
+        x = m.rng.choice((10, 15, 20, 25, 30, 40))
+        origen = t("dos.ej", "El número es un ejemplo del juego; RadLab usa esta misma unidad.")
+    dia_usv = x * 24
+    c = dia_usv / 1000
+    tot = c * e.total
+
+    def ef(bien):
+        def _(e):
+            if bien:
+                return [t("dos.si", "Bien calculado: la tripulación sabe cuánta radiación de fondo recibe cada día.")]
+            e.energia -= 10
+            return [t("dos.no", "Se asustaron con la cuenta y gastaron 10 kWh en refugiarse de más.")]
+        return _
+    ops = [S.Opcion(t("dos.o", "{v} mSv por día", v=n(c, 2)), ef(True), True),
+           S.Opcion(t("dos.o", "{v} mSv por día", v=n(dia_usv, 0)), ef(False)),
+           S.Opcion(t("dos.o", "{v} mSv por día", v=n(x / 24 / 1000, 4)), ef(False))]
+    m.rng.shuffle(ops)
+    return S.Decision(
+        "dosimetro",
+        t("dos.tit", "El dosímetro de la base"),
+        t("dos.enun", "RadLab es la base de datos de radiación de la NASA (OSDR): guarda lo que miden detectores "
+                      "reales en µSv por hora (microsieverts por hora). Un detector de la base marca {x} µSv/h. "
+                      "1 mSv son 1 000 µSv. ¿Cuántos mSv recibe un tripulante en un día de 24 horas? {o}",
+          x=x, o=origen),
+        ops,
+        t("dos.exp", "{x} µSv/h × 24 h = {mu} µSv por día. Como 1 mSv son 1 000 µSv: {mu} ÷ 1 000 = {c} mSv por "
+                     "día. En los {t} días de la misión serían {tot} mSv, muy lejos del límite de {l} mSv. Lo "
+                     "que sí lo pone en peligro es una tormenta solar fuerte.",
+          x=x, mu=n(dia_usv, 0), c=n(c, 2), t=e.total, tot=n(tot, 1), l=S.LIMITE_DOSIS),
+        datos=[t("dos.d1", "RadLab: dosis absorbida en µGy/h · equivalente de dosis en µSv/h")])
+
+
+# 19 · Ejercicio y huesos (CSA) 
+def _d_ejercicio(m):
+    e = m.e
+    T = e.total
+    pct_mes = N.CSA_HUESO_PCT_MES
+    c = round(T / 30 * pct_mes, 1)               # 28 días ≈ 0,9 %; 14 días ≈ 0,5 %
+
+    def ef(bien):
+        def _(e):
+            if bien:
+                e.animo = min(100, e.animo + 3)
+                return [t("eje.si", "La tripulación se compromete a hacer ejercicio todos los días y se siente más fuerte.")]
+            e.animo = max(0, e.animo - 3)
+            return [t("eje.no", "Se confiaron: sin ejercicio, los huesos y los músculos se debilitan.")]
+        return _
+    ops = [S.Opcion(t("eje.o", "Unos {x} %", x=n(c, 1)), ef(True), True),
+           S.Opcion(t("eje.o", "Unos {x} %", x=n(c * 10, 0 if c * 10 == int(c * 10) else 1)), ef(False)),
+           S.Opcion(t("eje.o", "Unos {x} %", x=n(c / 10, 2)), ef(False))]
+    m.rng.shuffle(ops)
+    return S.Decision(
+        "ejercicio",
+        t("eje.tit", "Ejercicio en el espacio"),
+        t("eje.enun", "En el espacio los astronautas pierden, en promedio, el {m} % de la densidad de sus huesos "
+                      "por mes (CSA). Un adulto mayor en la Tierra pierde el {a} % por año. La misión dura {t} "
+                      "días y un mes tiene unos 30. Si nadie hiciera ejercicio, ¿cuánto hueso perdería la "
+                      "tripulación en toda la misión?", m=pct_mes, a=N.CSA_HUESO_PCT_ANIO_MAYOR, t=T),
+        ops,
+        t("eje.exp", "{t} días ÷ 30 ≈ {me} meses, y se pierde {m} % por mes: {me} × {m} ≈ {c} %. Por eso en la "
+                     "Estación Espacial se hacen unas {h} horas de ejercicio al día, y la cápsula Orion lleva un "
+                     "volante de solo {kg} kg para hacer {mi} minutos casi todos los días (CSA). Un adulto mayor "
+                     "tarda un año en perder el {a} %: en el espacio es {v} veces más rápido (12 meses ÷ 1 mes). "
+                     "El OSDR de la NASA guarda estudios sobre cómo el vuelo espacial afecta huesos y músculos.",
+          t=T, me=n(T / 30, 1), m=pct_mes, c=n(c, 1), h=N.CSA_EJERCICIO_H_DIA, kg=N.CSA_VOLANTE_ORION_KG,
+          mi=N.CSA_EJERCICIO_ORION_MIN, a=N.CSA_HUESO_PCT_ANIO_MAYOR, v=N.HUESO_VECES_MAS_RAPIDO))

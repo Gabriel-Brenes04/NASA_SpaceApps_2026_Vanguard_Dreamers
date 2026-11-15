@@ -19,8 +19,8 @@ import random
 import sys
 from collections import Counter
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from base_lunar.simulador import Mision  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from game.logica.simulador import Mision  # noqa: E402
 
 
 def tarea_experta(m):
@@ -30,8 +30,8 @@ def tarea_experta(m):
     e = m.e
     if "estiba" in ts:
         return "estiba"
-    if "regolito" in ts and e.regolito < 2 and e.dia <= e.luz - 2 and e.energia > 150:
-        return "regolito"
+    if "radiacion" in ts and e.barrido < 0.2 and e.dia <= e.luz and e.energia > 150:
+        return "radiacion"
     if "paneles" in ts and e.energia < 250:
         return "paneles"
     if e.animo < 40 and "recreo" in ts:

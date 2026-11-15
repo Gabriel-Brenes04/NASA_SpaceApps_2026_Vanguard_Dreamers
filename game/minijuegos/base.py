@@ -97,7 +97,7 @@ class Microjuego:
         self.dibujar(lienzo)
         pygame.draw.rect(lienzo, COLORES["panel"], (0, 0, ANCHO, 96))
         pygame.draw.line(lienzo, COLORES["borde"], (0, 96), (ANCHO, 96), 2)
-        from ..texto_mate import fuente_pixel, pixel
+        from ..assets.texto_mate import fuente_pixel, pixel
         img = fuente_pixel(24).render(pixel(self.titulo), False, COLORES["oro"])
         lienzo.blit(img, (40, 18))
         img = fuente(20, False).render(self.instruccion, True, COLORES["texto"])
@@ -108,6 +108,6 @@ class Microjuego:
         col = COLORES["verde"] if frac > 0.4 else COLORES["naranja"] if frac > 0.2 else COLORES["rojo"]
         if frac > 0:
             pygame.draw.rect(lienzo, col, (barra.x, barra.y, int(barra.w * frac), barra.h), border_radius=9)
-        from ..textos import n
+        from ..assets.textos import n
         img = fuente_pixel(16).render(f"{n(self.restante(), 1)} s", False, COLORES["texto"])
         lienzo.blit(img, (barra.right + 10, barra.y + 1))

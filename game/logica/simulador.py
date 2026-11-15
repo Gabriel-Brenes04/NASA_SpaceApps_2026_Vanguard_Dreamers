@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""El simulador de la base lunar: reglas, sin pygame.
+"""El simulador de la base lunar: reglas
 
 Uso (lo mismo hacen la pantalla del juego y las pruebas):
 
@@ -11,8 +11,11 @@ Uso (lo mismo hacen la pantalla del juego y las pruebas):
         m.hacer_tarea("cosecha", 1.0)      # tarea del día; 1.0 = rendimiento normal
         resumen = m.cerrar_dia()           # consumo, producción y revisión de fin
 
-Los datos reales vienen de `datos_nasa.py`. Los de abajo marcados «parámetro del juego» son
-decisiones de diseño (tamaño de la batería, potencia de cada aparato...): no son de la NASA.
+Los datos reales (los recursos del reto: DONKI, RadLab/OSDR, APOD y la CSA) viven en `datos_nasa.py`
+y `clima.py`. Los números de abajo son «parámetros del juego»: decisiones de diseño (tamaño de la
+batería, potencia de cada aparato, cuánto gasta una persona...). No se presentan como datos del reto.
+
+Las 7 tareas del día, siempre visibles: cosecha, oxigeno, radiacion, hielo, recreo, estiba, paneles.
 """
 import random
 
@@ -23,7 +26,7 @@ from ..assets.textos import t, n
 PANEL_M2 = 40                    # m² de paneles solares
 PANEL_EFICIENCIA = 0.20          # fracción de la luz que se vuelve electricidad
 PANEL_KW = PANEL_M2 * N.IRRADIANCIA_W_M2 * PANEL_EFICIENCIA / 1000   # = 10,9 kW
-REACTOR_KW = N.REACTOR_KILOPOWER_KW   # 10 kW, se enciende al caer la noche (idea del equipo)
+REACTOR_KW = N.REACTOR_KW        # 10 kW, se enciende al caer la noche (idea del equipo)
 BATERIA_MAX = 500                # kWh
 CARGAS_KW = {                    # lo que gasta cada aparato encendido
     "base_dia": 4.0,             # aire, CO₂, computadoras, luces
@@ -51,8 +54,12 @@ MODOS = {
     "completa": {"luz": N.DIAS_DE_LUZ, "total": DIAS_MISION, "inicio": INICIO, "carga": 1.0},
     "corta": {"luz": 7, "total": 14, "inicio": INICIO_CORTA, "carga": 0.5},
 }
-TORMENTA_MSV = {"moderada": 80, "fuerte": 200}   # dosis afuera, sin protección (ver DATOS)
-LIMITE_DOSIS = N.LIMITE_TORMENTA_MSV            # 250 mSv: se usa como límite de la misión
+TORMENTA_MSV = {"moderada": 80, "fuerte": 200}   # dosis base afuera, sin protección; se escala con la clase
+                                                 # de la fulguración REAL de DONKI (clima.escala)
+LIMITE_DOSIS = N.LIMITE_MISION_MSV              # 250 mSv: límite de la misión (parámetro del juego)
+BARRIDO_PASO = 0.10              # cada barrido de radiación baja 10 % la dosis...
+BARRIDO_MAX = 0.30               # ...hasta un 30 % (tres barridos). Reemplaza al viejo blindaje de regolito.
+PANELES_KWH = 60                 # energía que suma limpiar y alinear los paneles (solo de día)
 
 RECURSOS = ("o2", "agua", "comida", "energia", "dosis", "animo")
 
@@ -89,7 +96,8 @@ class Estado:
         self.sistemas = {"generador": True, "reciclador": True, "invernadero": True}
         self.reciclador_roto = 0        # días que faltan para que llegue el repuesto
         self.panel_factor = 1.0         # 1 = panel sano y de frente al Sol
-        self.regolito = 0.0             # metros de regolito sobre el hábitat (0 a 3)
+        self.regolito = 0.0             # metros de regolito sobre el hábitat (0 a 3); hoy solo lo sube la mancha
+        self.barrido = 0.0              # fracción de dosis que bajaron los barridos de radiación (0 a 0,3)
         self.refugio = 1.0              # cuánto deja pasar el refugio (1 = no protege)
         self.refugio_elegido = False    # ya se decidió qué rodea al dormitorio
         self.racion = 1.0               # 1 = comida normal, 0.75 = racionada
@@ -145,11 +153,11 @@ class Estado:
         return PANEL_KW * self.panel_factor if self.de_dia(dia) else REACTOR_KW
 
     def factor_habitat(self):
-        """Cuánto de una tormenta solar entra al hábitat (el regolito la frena)."""
-        return max(0.25, 1 - 0.25 * self.regolito)
+        """Cuánto de una tormenta solar entra al hábitat (el regolito y los barridos la frenan)."""
+        return max(0.25, 1 - 0.25 * self.regolito) * (1 - self.barrido)
 
     def dosis_diaria(self):
-        return N.DOSIS_DIA_MSV * (1 - 0.15 * self.regolito)
+        return N.DOSIS_DIA_MSV * (1 - 0.15 * self.regolito) * (1 - self.barrido)
 
     def dias_que_alcanza(self, recurso):
         """Cuántos días dura un recurso al ritmo de hoy (None = no baja)."""
@@ -164,23 +172,25 @@ class Estado:
 
     def foto(self):
         return {k: round(getattr(self, k), 2) for k in RECURSOS} | {
-            "dia": self.dia, "regolito": self.regolito,
+            "dia": self.dia, "regolito": self.regolito, "barrido": self.barrido,
             "generador": self.sistemas["generador"], "reciclador": self.reciclando(),
             "invernadero": self.sistemas["invernadero"]}
 
 
-# ══ Tareas del día (cada una se volverá un minijuego; `r` = rendimiento 0,4 a 1,3) ═══════
-TAREAS = ("cosecha", "oxigeno", "regolito", "hielo", "recreo", "estiba", "paneles")
+# ══ Tareas del día (cada una puede ser un minijuego; `r` = rendimiento 0,4 a 1,3) ════════════
+# Siempre se muestran las 7. Las que hoy no se pueden hacer salen apagadas, con el motivo.
+TAREAS = ("cosecha", "oxigeno", "radiacion", "hielo", "recreo", "estiba", "paneles")
 
 
 def tarea_titulo(tid):
     return {
         "cosecha": t("tarea.cosecha", "Cosecha en el invernadero"),
         "oxigeno": t("tarea.oxigeno", "Lista de verificación del generador de O₂"),
-        "regolito": t("tarea.regolito", "Cubrir el hábitat con regolito"),
+        "radiacion": t("tarea.radiacion", "Barrido de radiación"),
         "hielo": t("tarea.hielo", "Traer hielo del cráter"),
         "recreo": t("tarea.recreo", "Recreo de la tripulación"),
         "estiba": t("tarea.estiba", "Estiba del cohete de carga"),
+        "paneles": t("tarea.paneles", "Limpiar y alinear los paneles solares"),
     }[tid]
 
 
@@ -188,10 +198,11 @@ def tarea_detalle(tid):
     return {
         "cosecha": t("tarea.cosecha.d", "+5 kg de comida · necesita el invernadero encendido"),
         "oxigeno": t("tarea.oxigeno.d", "+4 kg de O₂ · parte 4,5 L de agua"),
-        "regolito": t("tarea.regolito.d", "+1 m de blindaje · gasta 40 kWh"),
+        "radiacion": t("tarea.radiacion.d", "−10 % de dosis en cada barrido, hasta −30 %"),
         "hielo": t("tarea.hielo.d", "+15 L de agua · gasta 5 kWh para derretirlo"),
         "recreo": t("tarea.recreo.d", "+12 de ánimo"),
         "estiba": t("tarea.estiba.d", "+15 % de la carga que llegó hoy"),
+        "paneles": t("tarea.paneles.d", "+60 kWh de energía · solo de día"),
     }[tid]
 
 
@@ -246,18 +257,27 @@ class Mision:
                 "mejores": mejores}
 
     # ── ③ tarea ──────────────────────────────────────────────────────────────────────
-    def tareas_disponibles(self):
+    def tareas_estado(self):
+        """Las 7 tareas, siempre: [(id, se_puede, motivo_si_no)]."""
         e = self.e
-        if e.sin_tarea:
-            return []
-        ts = ["oxigeno", "hielo", "recreo"]
-        if e.sistemas["invernadero"]:
-            ts.insert(0, "cosecha")
-        if e.regolito < 3:
-            ts.append("regolito")
-        if e.carga_hoy:
-            ts.append("estiba")
-        return ts
+        res = []
+        for tid in TAREAS:
+            motivo = ""
+            if e.sin_tarea:
+                motivo = t("nod.rep", "hoy la tripulación está en una reparación")
+            elif tid == "cosecha" and not e.sistemas["invernadero"]:
+                motivo = t("nod.inv", "el invernadero está apagado")
+            elif tid == "estiba" and not e.carga_hoy:
+                motivo = t("nod.carga", "hoy no llegó ningún cohete de carga")
+            elif tid == "paneles" and not e.de_dia():
+                motivo = t("nod.noche", "de noche no hay Sol")
+            elif tid == "radiacion" and e.barrido >= BARRIDO_MAX - 1e-9:
+                motivo = t("nod.rad", "ya mapearon toda la radiación")
+            res.append((tid, not motivo, motivo))
+        return res
+
+    def tareas_disponibles(self):
+        return [tid for tid, ok, _ in self.tareas_estado() if ok]
 
     def hacer_tarea(self, tid, r=1.0):
         """Aplica la tarea con rendimiento r (1 = normal; el minijuego lo sube o lo baja)."""
@@ -276,11 +296,11 @@ class Mision:
             e.agua -= agua
             return [t("tar.oxigeno", "El generador hizo {o2} kg extra de O₂ con {agua} L de agua.",
                       o2=n(o2), agua=n(agua))]
-        if tid == "regolito":
-            m = 1.0 if r >= 0.6 else 0.5
-            e.regolito = min(3.0, e.regolito + m)
-            e.energia -= 40
-            return [t("tar.regolito", "Ya hay {m} m de regolito sobre el hábitat.", m=n(e.regolito))]
+        if tid == "radiacion":
+            paso = BARRIDO_PASO if r >= 0.6 else BARRIDO_PASO / 2
+            e.barrido = min(BARRIDO_MAX, e.barrido + paso)
+            return [t("tar.radiacion", "Los detectores mostraron dónde hay menos radiación y la tripulación se "
+                                       "mudó allí: la dosis baja {p} % en total.", p=n(e.barrido * 100, 0))]
         if tid == "hielo":
             litros = 15 * r
             e.agua += litros
@@ -297,6 +317,11 @@ class Mision:
                 setattr(e, k, getattr(e, k) + v * extra)
             return [t("tar.estiba", "Con la estiba bien hecha cupo un {p} % más de carga.",
                       p=n(extra * 100, 0))]
+        if tid == "paneles":
+            kwh = PANELES_KWH * r
+            e.energia = min(MAXIMOS["energia"], e.energia + kwh)
+            return [t("tar.paneles", "Con los paneles limpios y de frente al Sol entraron {k} kWh más.",
+                      k=n(kwh, 0))]
         return []
 
     # ── ④ cierre del día ─────────────────────────────────────────────────────────────
@@ -357,7 +382,7 @@ class Mision:
                 self.fin, self.causa = "derrota", causa
         if not self.fin and e.dosis >= LIMITE_DOSIS:
             self.fin = "derrota"
-            self.causa = t("fin.dosis", "La tripulación pasó el límite de radiación de la NASA ({l} mSv).",
+            self.causa = t("fin.dosis_limite", "La tripulación pasó el límite de radiación de la misión ({l} mSv).",
                            l=LIMITE_DOSIS)
         if not self.fin and e.animo <= 0:
             self.fin = "derrota"

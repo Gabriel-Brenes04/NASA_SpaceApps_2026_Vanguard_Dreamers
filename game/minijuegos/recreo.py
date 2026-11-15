@@ -23,8 +23,8 @@ import pygame
 
 from .base import ZONA, COLORES
 from ._kit import Partida, luz, degradado, guardado, texto, mezclar, translucido
-from .. import sonido
-from ..textos import t, n
+from ..assets import sonido
+from ..assets.textos import t, n
 
 VENTANA = pygame.Rect(108, 136, 1064, 468)
 TIERRA = (790, 372)

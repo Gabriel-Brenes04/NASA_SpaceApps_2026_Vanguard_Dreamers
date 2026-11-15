@@ -36,6 +36,10 @@ class MenuInicial:
         # botones
         self._dibujar_botones_titulo()
 
+        # «?»: de dónde vienen las imágenes de fondo (la imagen del día de la NASA)
+        if hasattr(self, "boton_ayuda"):
+            self.boton_ayuda(40, 40, "apod", r=16, etiqueta=t("tit.q", "¿De dónde son estas imágenes?"))
+
         # ── pie: crédito de la imagen, aviso y equipo ────────────────────────────────
         credito = self._fondo_credito()
         if credito:

@@ -23,8 +23,8 @@ import pygame
 
 from .base import ZONA, COLORES
 from ._kit import Partida, luz, degradado, guardado, texto, mezclar, translucido
-from .. import sonido
-from ..textos import t, n
+from ..assets import sonido
+from ..assets.textos import t, n
 
 SUP = 318                     # altura media de la superficie (las lomitas suben y los cráteres bajan)
 ARRIBA, ABAJO = SUP - 42, SUP + 50   # lo más alto y lo más hondo que llega el suelo

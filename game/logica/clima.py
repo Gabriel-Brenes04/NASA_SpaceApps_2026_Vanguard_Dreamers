@@ -2,7 +2,7 @@
 """Clima espacial REAL de la NASA (DONKI) dentro del juego.
 
 Dos fuentes, y el juego siempre dice cuál está usando:
-  · GUARDADOS: base_lunar/datos/donki.json, fulguraciones reales ya pasadas (tools/bajar_donki.py).
+  · GUARDADOS: game/data/donki.json, fulguraciones reales ya pasadas (tools/bajar_donki.py).
     Cada tormenta solar del juego se basa en una de ellas (su clase y su fecha).
   · EN VIVO: si hay internet, al abrir el juego se piden a DONKI las fulguraciones de los últimos
     30 días (en otro hilo, sin frenar el juego). Si no hay internet, se dice que son datos guardados.
@@ -10,6 +10,7 @@ La consulta no lleva ningún dato del jugador. Las dosis del juego son simplific
 """
 import datetime as dt
 import json
+import math
 import os
 import threading
 import urllib.request
@@ -17,7 +18,9 @@ import urllib.request
 from ..assets.textos import t, IDIOMA  # noqa: F401  (IDIOMA se lee de textos en cada llamada)
 from ..assets import textos
 
-_RUTA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datos", "donki.json")
+_DATOS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+_RUTA = os.path.join(_DATOS_DIR, "donki.json")
+_RUTA_RADLAB = os.path.join(_DATOS_DIR, "radlab.json")     # opcional: lo baja tools/bajar_radlab.py
 _API = "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?startDate={ini}&endDate={fin}"
 _DATOS = None
 VIVO = {"estado": "sin_pedir"}          # sin_pedir · pidiendo · listo · sin_internet
@@ -39,6 +42,18 @@ def datos():
     return _DATOS
 
 
+def escala(ev):
+    """Qué tan fuerte es una fulguración real frente a la «típica» de su letra, de 0,85 a 1,2.
+    La dosis de la tormenta del juego se multiplica por esto: una X9 pega más que una X1.
+    M: de M1 (0,85) a M9.9 (1,15). X: de X1 (0,85) a X10 o más (1,2), por la escala de potencias."""
+    p = (ev or {}).get("potencia") or potencia((ev or {}).get("clase", ""))
+    if p <= 0:
+        return 1.0
+    if p < 100:                                        # clase M (o más chica)
+        return round(0.85 + 0.30 * max(0.0, min(1.0, (p - 10) / 90)), 2)
+    return round(0.85 + 0.35 * max(0.0, min(1.0, math.log10(p / 100))), 2)
+
+
 def potencia(clase):
     try:
         return {"A": 0.01, "B": 0.1, "C": 1, "M": 10, "X": 100}[clase[0]] * float(clase[1:])
@@ -55,6 +70,18 @@ def fecha(iso):
     if textos.IDIOMA == "en":
         return f"{_MESES_EN[d.month - 1]} {d.day}, {d.year}"
     return f"{d.day} de {_MESES_ES[d.month - 1]} de {d.year}"
+
+
+def radlab():
+    """Mediciones de RadLab (NASA OSDR) guardadas por tools/bajar_radlab.py, o None si no se han bajado.
+    Forma: {"bajado": "2026-11-15", "mediciones": [{"nombre", "n", "equivalente_usv_h", "absorbida_ugy_h"}, ...]}"""
+    try:
+        with open(_RUTA_RADLAB, encoding="utf-8") as f:
+            d = json.load(f)
+        ms = [m for m in d.get("mediciones", []) if m.get("equivalente_usv_h")]
+        return {**d, "mediciones": ms} if ms else None
+    except (OSError, ValueError, AttributeError):
+        return None
 
 
 def evento_real(rng, nivel):

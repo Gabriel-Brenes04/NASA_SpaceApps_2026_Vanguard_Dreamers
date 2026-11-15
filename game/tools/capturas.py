@@ -15,11 +15,11 @@ import sys
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, RAIZ)
+sys.path.insert(0, os.path.dirname(RAIZ))
 sys.path.insert(0, os.path.join(RAIZ, "tools"))
 
 import pygame  # noqa: E402
-from base_lunar.juego import Juego  # noqa: E402
+from game.logica.juego import Juego  # noqa: E402
 import simular_misiones as SM  # noqa: E402
 
 
@@ -76,7 +76,11 @@ def jugar(j, semilla, tipo, rng, carpeta=None, hechas=None, modo="completa"):
         ts = m.tareas_disponibles()
         if ts:
             tid = SM.tarea_experta(m) if tipo == "experto" else rng.choice(ts)
-            j.elegir_tarea(tid or ts[0])
+            tid = tid or ts[0]
+            if tid in ("paneles", "radiacion"):      # estos dos abren su propia ventana de pygame: no se juegan aquí
+                j.hacer_tarea(tid, 1.0)
+            else:
+                j.elegir_tarea(tid)
             cuadros = 0
             while j.fase == "micro":           # el microjuego se juega con clics al azar
                 ev = []
@@ -105,7 +109,7 @@ def main():
     args = sys.argv[1:]
     carpeta = args[args.index("--salida") + 1] if "--salida" in args else os.path.join(RAIZ, "_capturas")
     if "--en" in args:
-        from base_lunar import textos
+        from game.assets import textos
         textos.poner_idioma("en")
         if "--salida" not in args:
             carpeta = os.path.join(RAIZ, "_capturas", "en")
@@ -119,6 +123,13 @@ def main():
         modo = "corta" if s % 2 else "completa"
         m = jugar(j, 300 + s, tipo, rng, carpeta, hechas, modo)
         resultados.append((tipo, m.fin))
+    j.fase = "titulo"
+    j.ayuda = None
+    for clave in ("apod", "recursos", "cosecha", "oxigeno", "radiacion", "hielo", "recreo", "estiba", "paneles"):
+        j.fase = "titulo" if clave == "apod" else "tarea"
+        j.abrir_ayuda(clave)
+        guardar(j, carpeta, "13_ayuda_" + clave, hechas)
+        j.cerrar_ayuda()
     j.fase = "datos"
     guardar(j, carpeta, "11_datos_nasa", hechas)
     j.fase = "como"

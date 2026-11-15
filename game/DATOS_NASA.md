@@ -1,41 +1,45 @@
 # Datos reales del juego · Real data used in the game
 
-Cada número se leyó en la página de la fuente el 14/11/2026 antes de usarlo. Si un dato no se pudo verificar,
-no se usa. Los números de diseño del juego (tamaño de la batería, potencia de cada aparato, lo que rinde el
-invernadero) son simplificaciones y no se presentan como datos de la NASA.
+Hay dos:
 
-Every number was read on the source page on 2026-11-14 before being used. Game-design numbers (battery size,
-power of each device, greenhouse yield) are simplifications and are not presented as NASA data.
+- **A · Recursos del reto** (DONKI, RadLab/OSDR, APOD/NASA Open APIs, CSA). Es lo que el juego presenta como «datos reales»
+- **C · Parámetros de diseño**. Números que el simulador necesita; algunos se inspiran en otras páginas de la NASA.
+
+Fecha de lectura de las páginas: 15/11/2026.
+
+## A · Recursos del reto · Challenge resources
 
 | Dato · Data | Valor · Value | En el juego · In the game | Fuente · Source |
 |---|---|---|---|
-| Oxígeno por persona al día · O₂ per crew member per day | 0,816 kg | Consumo de la tripulación | [NASA BVAD Rev1 (2018), tabla 3-33](https://ntrs.nasa.gov/citations/20180001338) |
-| Comida por persona al día · Food per crew member per day | 1,51 kg (tal como se envía, sin empaque) | Consumo de comida | [NASA BVAD Rev1, tabla 3-33](https://ntrs.nasa.gov/citations/20180001338) |
-| Agua por persona al día · Water per crew member per day | 4,48 kg (base planetaria temprana; 2,5 para tomar) | Consumo de agua | [NASA BVAD Rev1, tablas 3-33 y 4-20](https://ntrs.nasa.gov/citations/20180001338) |
-| Agua recuperada · Water recovery | 98 % | El reciclador de la base | [NASA, 20/06/2023](https://www.nasa.gov/missions/station/iss-research/nasa-achieves-water-recovery-milestone-on-international-space-station/) |
-| Día lunar · Lunar day | 29,53 días terrestres | Duración de las misiones | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Día y noche · Day and night | unas dos semanas cada uno | 14 de sol y 14 de noche | [NASA Science, Moonlight](https://science.nasa.gov/moon/moonlight/) |
-| Luz del Sol en la Luna · Solar irradiance | 1361 W/m² | Potencia del panel solar | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Temperatura · Temperature | 127 °C al sol, −173 °C en la oscuridad | Calefacción y tuberías | [NASA Science, Moon Facts](https://science.nasa.gov/moon/facts/) |
-| Radiación en la superficie · Surface dose | ~0,5 mSv por día | Dosis de cada día | [NASA OCHMO-TB-020 Rev E (2022)](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf) |
-| Límite por tormenta solar · Solar particle event limit | 250 mSv | Límite de la misión | [NASA-STD-3001 Vol. 1 Rev B (2022)](https://www.nasa.gov/wp-content/uploads/2020/10/2022-01-05_nasa-std-3001_vol.1_rev._b_final_draft_with_signature_010522.pdf) |
-| Límite de toda la carrera · Career limit | 600 mSv | Contexto | [NASA-STD-3001 Vol. 1 Rev B (2022)](https://www.nasa.gov/wp-content/uploads/2020/10/2022-01-05_nasa-std-3001_vol.1_rev._b_final_draft_with_signature_010522.pdf) |
-| Aviso antes de las partículas · Warning time | 15 a 30 minutos | ¿Llegan al refugio? | [NASA Solar Dynamics Observatory](https://sdo.gsfc.nasa.gov/mission/spaceweather/spaceweather.php) |
-| Regolito que protege · Regolith shielding | ~3 m | Blindaje del hábitat | [NASA NTRS 20130009378](https://ntrs.nasa.gov/citations/20130009378) |
-| Agua y materiales con hidrógeno como escudo · Hydrogen-rich shielding | eficaces contra las partículas del Sol; pared de agua de ~10 cm | El refugio de tanques de agua | [NASA NTRS 20150001237](https://ntrs.nasa.gov/api/citations/20150001237/downloads/20150001237.pdf) · [OCHMO-TB-020](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf) |
-| Reactor de fisión · Fission reactor | clase 10 kW (Kilopower); meta de 40 kW | Energía de noche | [NASA Kilopower](https://www.nasa.gov/directorates/stmd/tech-demo-missions-program/kilopower-hmqzw/) · [Fission Surface Power](https://www.nasa.gov/exploration-systems-development-mission-directorate/fission-surface-power/) |
-| Reactor lunar LR-1 | primer reactor de fisión en la superficie lunar (proyecto de la NASA) | Contexto | [NASA Space Nuclear](https://www.nasa.gov/space-nuclear/) |
-| Oxígeno por electrólisis · Oxygen by electrolysis | se parte agua con electricidad | El generador de O₂ | [NASA ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/) |
-| Panel inclinado · Tilted panel | la potencia baja con el coseno del ángulo | «El panel se torció» | [NASA Small Spacecraft, Power](https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems/) |
-| Hielo en los polos · Polar water ice | confirmado por LCROSS (2009) | Excursión al cráter | [NASA Ames 10-89AR](https://www.nasa.gov/centers/ames/news/releases/2010/10-89AR.html) |
-| Hielo en la superficie · Surface ice in shadowed craters | el instrumento M3 de la NASA confirmó en 2018 hielo de agua en varias zonas en sombra permanente | Microjuego del hielo (escarcha en el fondo de los cráteres) | [NASA Science, Moon Water and Ices](https://science.nasa.gov/moon/moon-water-and-ices/) |
-| Bolsas de carga · Cargo Transfer Bags | tamaños fijos: media, sencilla (≈ 50 × 42 × 25 cm), doble y triple | Microjuego de la estiba | [Baccus, Broyan y Borrego, NASA JSC (2016), pág. 2](https://ntrs.nasa.gov/citations/20160002631) |
-| Gravedad · Surface gravity | 1,62 m/s² (Tierra: 9,80) | ¿Se puede cargar la caja? | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Distancia Tierra–Luna · Earth–Moon distance | 384 400 km | Retraso de la llamada; microjuego del recreo | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Tamaño de la Tierra y la Luna · Earth and Moon size | 12 742 km y 3 475 km de ancho (radios medios 6371,0 y 1737,4 km): la Tierra es unas 3,7 veces más ancha | Microjuego del recreo | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
-| Fulguraciones reales · Real solar flares | 1941 fulguraciones (2024-01 a 2026-11); 243 guardadas en el juego (85 clase X, 54 con partículas) | Cada tormenta del juego se basa en una real (clase y fecha); la decisión del blindaje muestra el Sol real, en vivo si hay internet | [NASA CCMC DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) · API: `https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR` y `/get/SEP` |
-| Escala de las fulguraciones · Flare classes | una X es 10 veces una M y 100 veces una C | Explicación de la tormenta | [NASA Science, Solar Storms and Flares](https://science.nasa.gov/sun/solar-storms-and-flares/) |
-| Dosis medida por Chang'e-4 · Measured dose | 1,37 mSv por día | Solo contexto (**no es de la NASA**) | Zhang et al., *Science Advances* 6, eaaz1334 (2020) |
+| Fulguraciones solares · Solar flares | 1941 (2024-01 a 2026-11); 243 guardadas (85 clase X, 153 clase M) | Cada tormenta se basa en una real; su clase escala la dosis (`logica/clima.py`) | [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) · API `/DONKI-API/get/FLR`, `/get/SEP` |
+| Tipos de evento DONKI | FLR, SEP, CME, IPS, MPC, GST, RBE, HSS | Explicados en la ayuda «?» | [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) |
+| Unidades de dosis · Dose units | µGy/h (absorbida) y µSv/h (equivalente) | Decisión «El dosímetro de la base» | [RadLab API](https://visualization.osdr.nasa.gov/radlab/gui/data-api/) |
+| Instrumentos · Instruments | Liulin-5, ALTEA, Timepix, DosTel, TEPC | Ayuda de la radiación | [RadLab release history](https://visualization.osdr.nasa.gov/radlab/kb/Release_history) |
+| Otros lugares de medición | Chang'e 4 (Luna), LRO, Curiosity (Marte) | Contexto | [RadLab release history](https://visualization.osdr.nasa.gov/radlab/kb/Release_history) |
+| Base de datos RadLab | Grigorev et al. | Referencia | [NTRS 20240012790](https://ntrs.nasa.gov/citations/20240012790) |
+| Imagen del día | APOD | Fondos del menú, con crédito | [NASA Open APIs](https://api.nasa.gov/) |
+| Calorías por astronauta | 1 900 a 3 200 al día | Decisión de la ración | [CSA, Eating in space](https://www.asc-csa.gc.ca/eng/astronauts/living-in-space/eating-in-space.asp) |
+| Ejercicio y hueso | 2 h/día en la Estación; ~1 % de hueso por mes (12 veces más rápido que un adulto mayor en la Tierra: 1 % por año) | Decisión del ejercicio | [CSA, Physical activity in space](https://www.asc-csa.gc.ca/eng/astronauts/living-in-space/physical-activity-in-space.asp) |
+| Vueltas a la Tierra | 16 por día | Ayuda del recreo | [CSA, Relaxing in space](https://www.asc-csa.gc.ca/eng/astronauts/living-in-space/relaxing-in-space.asp) |
+| Cultivo de comida | misiones largas a la Luna | Ayuda de la cosecha | [CSA, Food production on the Moon](https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/) |
+
+## C · Parámetros de diseño · Design parameters
+
+| Parámetro | Valor | Referencia que lo inspira |
+|---|---|---|
+| O₂, comida y agua por persona | 0,816 · 1,51 · 4,48 | [NASA BVAD Rev1 (2018)](https://ntrs.nasa.gov/citations/20180001338) |
+| Reciclaje de agua | 98 % | [NASA, 20/06/2023](https://www.nasa.gov/missions/station/iss-research/nasa-achieves-water-recovery-milestone-on-international-space-station/) |
+| Día lunar, 1361 W/m², gravedad, distancia | 14 + 14 días · 1361 · 1,62 · 384 400 km | [NSSDC Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| Temperaturas | 127 °C / −173 °C | [NASA Science, Moon Facts](https://science.nasa.gov/moon/facts/) |
+| Dosis de fondo | 0,5 mSv/día | [NASA OCHMO-TB-020 Rev E](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf) |
+| Límite de la misión | 250 mSv | [NASA-STD-3001 Vol. 1 Rev B](https://www.nasa.gov/wp-content/uploads/2020/10/2022-01-05_nasa-std-3001_vol.1_rev._b_final_draft_with_signature_010522.pdf) |
+| Aviso de partículas | 15 a 30 min | [NASA SDO](https://sdo.gsfc.nasa.gov/mission/spaceweather/spaceweather.php) |
+| Regolito y agua como escudo | (el estado de regolito se conserva; la tarea es «barrido de radiación») | [NTRS 20130009378](https://ntrs.nasa.gov/citations/20130009378) |
+| Reactor | 10 kW | [NASA Kilopower](https://www.nasa.gov/directorates/stmd/tech-demo-missions-program/kilopower-hmqzw/) |
+| Electrólisis | 36 g de agua → 32 g de O₂ (fórmula química) | [NASA ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/) |
+| Hielo lunar | LCROSS 2009, M3 2018 | [NASA Science](https://science.nasa.gov/moon/moon-water-and-ices/) |
+| Clases de fulguración | X = 10 × M | [NASA Science](https://science.nasa.gov/sun/solar-storms-and-flares/) |
+
 
 ## Por qué DONKI · Why DONKI
 

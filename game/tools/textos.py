@@ -4,7 +4,7 @@
     python tools/textos.py sacar  _traduccion/textos_es.json   (todas las claves con su español)
     python tools/textos.py revisar                               (¿falta alguna en inglés? ¿llaves iguales?)
 
-Busca en base_lunar/ cada llamada t("clave", "texto en español", ...). Las claves armadas con «+»
+Busca en game/ cada llamada t("clave", "texto en español", ...). Las claves armadas con «+»
 (por ejemplo t("cie.apagon." + k, ...)) se listan aparte con sus valores posibles.
 """
 import ast
@@ -14,8 +14,8 @@ import re
 import string
 import sys
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, RAIZ)
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # la carpeta del paquete «game»
+sys.path.insert(0, os.path.dirname(RAIZ))
 
 
 def _cadena(nodo):
@@ -26,7 +26,7 @@ def _cadena(nodo):
 
 def sacar():
     claves, dinamicas = {}, []
-    for raiz, _d, archivos in os.walk(os.path.join(RAIZ, "base_lunar")):
+    for raiz, _d, archivos in os.walk(RAIZ):
         if "__pycache__" in raiz:
             continue
         for a in sorted(archivos):
@@ -44,8 +44,8 @@ def sacar():
                     else:
                         dinamicas.append(lugar)
     # claves armadas a mano (las que el código arma con «+» o con un número)
-    from base_lunar import datos_nasa as N
-    for i, (dato, fuente, _url, _nasa) in enumerate(N.FUENTES):
+    from game.data import datos_nasa as N
+    for i, (dato, fuente, _url, _origen) in enumerate(N.FUENTES):
         claves.setdefault(f"fuente.{i}", {"es": dato, "donde": "datos_nasa.FUENTES"})
         claves.setdefault(f"fuente.{i}.f", {"es": fuente, "donde": "datos_nasa.FUENTES"})
     for k, es in (("cie.apagon.invernadero", "¡Apagón! Se apagó solo el {s} para salvar la batería."),
@@ -63,7 +63,7 @@ def llaves(texto):
 
 
 def revisar():
-    from base_lunar.textos_en import EN
+    from game.assets.textos_en import EN
     claves, _ = sacar()
     faltan = [k for k in claves if k not in EN]
     malas = []

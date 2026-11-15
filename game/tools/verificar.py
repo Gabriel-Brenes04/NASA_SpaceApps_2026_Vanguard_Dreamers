@@ -22,7 +22,7 @@ import sys
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, RAIZ)
+sys.path.insert(0, os.path.dirname(RAIZ))
 sys.path.insert(0, os.path.join(RAIZ, "tools"))
 
 FALLAS = []
@@ -43,8 +43,11 @@ def main():
     pygame.display.set_mode((1, 1))
 
     print("1. Paquete")
-    from base_lunar import datos_nasa, decisiones, juego, microjuegos, simulador, textos, texto_mate  # noqa: F401
-    ok("base_lunar importa completo")
+    from game.data import datos_nasa, curiosidades  # noqa: F401
+    from game.logica import decisiones, juego, simulador  # noqa: F401
+    from game import minijuegos as microjuegos  # noqa: F401
+    from game.assets import textos, texto_mate  # noqa: F401
+    ok("el paquete game importa completo")
 
     print("2. Datos de la NASA")
     sin_url = [f for f in datos_nasa.FUENTES if not f[2].startswith("https://")]
@@ -54,7 +57,7 @@ def main():
     m = simulador.Mision(11)
     ids = ["arquitecto", "panel", "noche", "tormenta:moderada", "tormenta:fuerte", "mancha", "reciclador",
            "micrometeorito", "enfermo", "reabastecimiento", "oxigeno", "racion", "electrolisis", "hielo",
-           "gravedad", "temperatura", "llamada", "angulo"]
+           "gravedad", "temperatura", "llamada", "angulo", "dosimetro", "ejercicio"]
     distintas = set()
     for semilla in range(60):
         modo = ("completa", "corta")[semilla % 2]
@@ -115,7 +118,8 @@ def main():
                 break
         else:
             ok(f"{nombre}: termina solo, rendimiento en rango, aguanta clics al azar")
-    faltan = [t for t in ("cosecha", "oxigeno", "regolito", "hielo") if t not in microjuegos.REGISTRO]
+    propios = ("radiacion", "paneles")        # tienen su minijuego aparte (minijuegos/barrido_orbital y solaris)
+    faltan = [t for t in simulador.TAREAS if t not in microjuegos.REGISTRO and t not in propios]
     if faltan:
         print(f"  · todavía sin microjuego (se hacen automáticas): {', '.join(faltan)}")
 
@@ -130,13 +134,13 @@ def main():
                 f"misión {modo}, {tipo}: gana {pct:.0f} % (se espera {minimo}–{maximo} %)")
 
     print("5a. Clima espacial real (NASA DONKI)")
-    from base_lunar import clima
+    from game.logica import clima
     d = clima.datos()
     ev = d.get("eventos", [])
     x = [e for e in ev if e.get("clase", "").startswith("X")]
     mm = [e for e in ev if e.get("clase", "").startswith("M")]
     if not x or not mm:
-        falla("base_lunar/datos/donki.json no tiene fulguraciones X y M (correr tools/bajar_donki.py)")
+        falla("game/data/donki.json no tiene fulguraciones X y M (correr tools/bajar_donki.py)")
     elif any(not (e.get("pico") and e.get("enlace", "").startswith("https://")) for e in ev):
         falla("hay eventos de DONKI sin fecha o sin enlace")
     else:
@@ -148,10 +152,10 @@ def main():
         ok("el juego dice si el clima espacial es en vivo o guardado")
 
     print("5b. Letras incluidas con su licencia")
-    carpeta_f = os.path.join(RAIZ, "base_lunar", "fuentes")
+    carpeta_f = os.path.join(RAIZ, "assets", "fuentes")
     ttfs = [a for a in os.listdir(carpeta_f) if a.lower().endswith((".ttf", ".otf"))] if os.path.isdir(carpeta_f) else []
     if ttfs and not os.path.exists(os.path.join(carpeta_f, "OFL.txt")):
-        falla("hay letras en base_lunar/fuentes/ sin su archivo de licencia OFL.txt")
+        falla("hay letras en assets/fuentes/ sin su archivo de licencia OFL.txt")
     elif ttfs and "Press Start 2P" not in open(os.path.join(RAIZ, "CREDITOS.md"), encoding="utf-8").read():
         falla("la letra Press Start 2P no está anotada en CREDITOS.md")
     else:
@@ -164,7 +168,7 @@ def main():
         falla(f"inglés: faltan {len(faltan)} textos y {len(malas)} tienen llaves distintas (python tools/textos.py revisar)")
     else:
         ok(f"{len(claves)} textos traducidos con las mismas llaves")
-    from base_lunar import textos as TX
+    from game.assets import textos as TX
     TX.poner_idioma("en")
     try:
         for semilla in range(30):
@@ -190,8 +194,8 @@ def main():
     if os.path.exists(local):
         patrones += [re.escape(p.strip()) for p in open(local, encoding="utf-8") if p.strip()]
     prohibidos = re.compile("|".join(patrones), re.I)
-    for carpeta in ("base_lunar", "tools"):
-        for raiz, _dirs, archivos in os.walk(os.path.join(RAIZ, carpeta)):
+    for carpeta in (".", "tools"):
+        for raiz, _dirs, archivos in os.walk(os.path.normpath(os.path.join(RAIZ, carpeta))):
             if "__pycache__" in raiz:
                 continue
             for a in archivos:
@@ -201,7 +205,7 @@ def main():
                 texto = open(ruta, encoding="utf-8", errors="ignore").read()
                 if a != "verificar.py" and prohibidos.search(texto):
                     falla(f"{os.path.relpath(ruta, RAIZ)} menciona algo que no va: «{prohibidos.search(texto).group(0)}»")
-    ok("revisadas base_lunar/ y tools/")
+    ok("revisadas game/ y tools/")
 
     print()
     if FALLAS:
