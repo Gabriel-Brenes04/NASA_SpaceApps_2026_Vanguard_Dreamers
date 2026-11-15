@@ -7,15 +7,13 @@ Lo bien que te vaya cambia cuánto rinde la tarea: de 0,4 (muy mal) a 1,3 (perfe
 
 | Archivo | Tarea que reemplaza | Qué da | Idea |
 |---|---|---|---|
-| `huerto.py` | `cosecha` | comida | Arrastrar la gota de agua a las macetas que se marchitan |
-| `paneles.py` | `paneles` | energía | Girar el panel hasta la zona verde, de frente al Sol |
-| `escudo.py` | `regolito` | blindaje | Clic cuando la barra pase por la zona segura |
 | `oxigeno.py` | `oxigeno` | oxígeno | Sellar fugas antes de que se rajen las tuberías; la presión baja más rápido entre más fugas haya (y sube sola sin fugas); cada tanque lleno = 1 astronauta, 1 día (40 s) |
 | `hielo.py` | `hielo` | agua | Llevar el vehículo por un suelo con lomitas y cráteres, perforar y soltar dentro de las bolsas de hielo; desde el nivel 3, radar (38 s) |
 | `recreo.py` | `recreo` | ánimo | Tomarle fotos a la Tierra con zoom (apretar y soltar): relámpagos, auroras, huracanes, cometas, naves y encargos (hasta Costa Rica) (40 s) |
 | `estiba.py` | `estiba` | más carga del cohete | Soltar las bolsas en su sección (3 × 6) sin dejar huecos; se pueden cambiar por las de la cinta; las secciones llenas se sellan (solo el día que llega el cohete) (45 s) |
 
-Los cortos (`paneles.py`, `escudo.py`) sirven de **ejemplo** para copiar ideas. Ya todas las tareas tienen microjuego.
+Las tareas `cosecha` (huerto), `paneles` y `regolito` (escudo) las hace el resto del equipo; mientras su
+microjuego no esté aquí, esas tareas se hacen solas.
 
 ### Los largos usan el kit (`_kit.py`)
 
