@@ -8,6 +8,9 @@ from .systems.solar_system import SolarSystem
 from .systems.energy_manager import EnergyManager
 
 
+FIN_ESPERA = 4.0      # segundos que se ve la pantalla final antes de volver a Mission Survival
+
+
 class SolarisGame:
     def __init__(self, screen=None):
         if screen is None:
@@ -20,7 +23,7 @@ class SolarisGame:
         self.font = self.load_font(14)
         self.small = self.load_font(10)
         self.tiny = self.load_font(8)
-        self.state = "MENU"
+        self.state = "PLAYING"        # sin pantalla de inicio: se juega de una vez
         self.running = True
         self.reset()
 
@@ -33,6 +36,7 @@ class SolarisGame:
         self.solar = SolarSystem()
         self.energy = EnergyManager()
         self.elapsed = 0.0
+        self.fin_timer = 0.0
         self.score = 0
         self.message_timer = 0.0
         self.message = ""
@@ -56,15 +60,9 @@ class SolarisGame:
         if event.type == pygame.QUIT:
             self.running = False
         elif event.type == pygame.KEYDOWN:
-            if self.state == "MENU":
-                if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    self.reset()
-                    self.state = "PLAYING"
-                elif event.key == pygame.K_ESCAPE:
-                    self.running = False
-            elif self.state == "PLAYING":
+            if self.state == "PLAYING":
                 if event.key == pygame.K_ESCAPE:
-                    self.state = "MENU"
+                    self.running = False          # ESC: volver al juego principal
                 elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
                     self.solar.rotate_selected(-4)
                 elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
@@ -77,11 +75,8 @@ class SolarisGame:
                     self.solar.select_at((self.solar.panels[(self.solar.selected + 1) % len(self.solar.panels)].x,
                                           self.solar.panels[(self.solar.selected + 1) % len(self.solar.panels)].y))
             elif self.state in ("WON", "LOST"):
-                if event.key in (pygame.K_RETURN, pygame.K_r):
-                    self.reset()
-                    self.state = "PLAYING"
-                elif event.key == pygame.K_ESCAPE:
-                    self.state = "MENU"
+                if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
+                    self.running = False          # salir sin esperar
         elif event.type == pygame.MOUSEBUTTONDOWN and self.state == "PLAYING":
             if event.button == 1:
                 self.solar.select_at(event.pos)
@@ -91,6 +86,11 @@ class SolarisGame:
                 self.solar.rotate_selected(-4)
 
     def update(self, dt):
+        if self.state in ("WON", "LOST"):
+            self.fin_timer += dt
+            if self.fin_timer >= FIN_ESPERA:
+                self.running = False              # sale solo, sin necesidad de ESC
+            return
         if self.state != "PLAYING":
             return
         self.elapsed += dt
@@ -134,7 +134,7 @@ class SolarisGame:
         self.text("CLIC: SELECCIONAR PANEL", 32, 591, S.WHITE, self.tiny)
         self.text("A / D o FLECHAS: ROTAR", 315, 591, S.WHITE, self.tiny)
         self.text("Q / E: GIRO RAPIDO", 585, 591, S.WHITE, self.tiny)
-        self.text("ESC: MENU", 830, 591, S.MUTED, self.tiny)
+        self.text("ESC: SALIR", 830, 591, S.MUTED, self.tiny)
 
     def draw_playing(self):
         self.solar.draw(self.screen, self.small, self.tiny)
@@ -148,18 +148,6 @@ class SolarisGame:
         elif self.solar.storm_active:
             self.text("La tormenta solar reduce temporalmente la eficiencia de los paneles.", S.WIDTH // 2, 135, S.YELLOW, self.tiny, center=True)
 
-    def draw_menu(self):
-        self.text("SOLARIS", S.WIDTH // 2, 170, S.CYAN, self.font, center=True)
-        self.text("OPERACION HELIOS", S.WIDTH // 2, 208, S.WHITE, self.small, center=True)
-        pygame.draw.circle(self.screen, S.YELLOW, (S.WIDTH // 2, 300), 35)
-        pygame.draw.circle(self.screen, (255, 230, 150), (S.WIDTH // 2 - 9, 289), 10)
-        self.text("ALINEA LOS PANELES Y MANTEN LA ESTACION ACTIVA", S.WIDTH // 2, 375, S.WHITE, self.tiny, center=True)
-        self.text("Selecciona cada panel y apunta su flecha hacia el Sol.", S.WIDTH // 2, 410, S.MUTED, self.tiny, center=True)
-        self.text("La bateria se descarga si produces menos energia de la que consumes.", S.WIDTH // 2, 433, S.MUTED, self.tiny, center=True)
-        self.text("Habra eclipses y tormentas solares durante la operacion.", S.WIDTH // 2, 456, S.MUTED, self.tiny, center=True)
-        self.text("PRESIONA ENTER PARA COMENZAR", S.WIDTH // 2, 520, S.GREEN, self.small, center=True)
-        self.text("ESC PARA SALIR", S.WIDTH // 2, 552, S.MUTED, self.tiny, center=True)
-
     def draw_end(self):
         self.panel((190, 190, 644, 250), (9, 20, 37), S.CYAN if self.state == "WON" else S.RED)
         title = "OPERACION COMPLETADA" if self.state == "WON" else "FALLO ENERGETICO"
@@ -167,14 +155,13 @@ class SolarisGame:
         self.text(title, S.WIDTH // 2, 235, color, self.small, center=True)
         self.text(f"PUNTUACION: {self.score}", S.WIDTH // 2, 290, S.WHITE, self.small, center=True)
         self.text(f"ENERGIA FINAL: {self.energy.battery:.1f}%", S.WIDTH // 2, 325, S.WHITE, self.small, center=True)
-        self.text("ENTER / R: VOLVER A JUGAR", S.WIDTH // 2, 375, S.GREEN, self.tiny, center=True)
-        self.text("ESC: MENU PRINCIPAL", S.WIDTH // 2, 405, S.MUTED, self.tiny, center=True)
+        faltan = max(0, int(FIN_ESPERA - self.fin_timer) + 1)
+        self.text(f"VOLVIENDO A MISSION SURVIVAL EN {faltan} s", S.WIDTH // 2, 375, S.GREEN, self.tiny, center=True)
+        self.text("ENTER: SALIR YA", S.WIDTH // 2, 405, S.MUTED, self.tiny, center=True)
 
     def draw(self):
         self.draw_background()
-        if self.state == "MENU":
-            self.draw_menu()
-        elif self.state == "PLAYING":
+        if self.state == "PLAYING":
             self.draw_playing()
         else:
             self.solar.draw(self.screen, self.small, self.tiny)

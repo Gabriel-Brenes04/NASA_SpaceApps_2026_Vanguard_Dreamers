@@ -29,7 +29,7 @@ class PantallasInformacion:
                                     "7 días de sol y los primeros 7 de la noche. Se pierde si se acaba el oxígeno, el agua "
                                     "o la comida, si la radiación pasa el límite de la misión (250 mSv) o si el ánimo llega "
                                     "a cero."), 20, "oro", 200, y, 880)
-        self.boton_ayuda(W - 190, 82, "recursos", etiqueta=t("como.q", "Los recursos"))
+        self.boton_ayuda(W - 190, 82, "recursos", etiqueta=t("como.q", ""))
         self.boton((W // 2 - 120, 600, 240, 52), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
                     tecla=[pygame.K_RETURN, pygame.K_ESCAPE])
 
@@ -53,11 +53,6 @@ class PantallasInformacion:
             self.txt(t(f"fuente.{i}.f", fuente_txt), 14, "gris", x + 68, y + alto + 1)
             ys[col] = y + alto + 24
         y = max(ys) + 4
-        self.rico(t("dat.nota", "Los números de diseño (cuánto gasta una persona, el tamaño de la batería, la potencia "
-                                "de cada aparato, el límite de 250 mSv) son parámetros del juego, no datos de los recursos "
-                                "del reto: DATOS_NASA.md dice de dónde salió cada uno. Este juego no está afiliado a la "
-                                "NASA ni a la CSA ni respaldado por ellas, y no usa sus logos."),
-                  15, "gris", 70, y, 1140)
         self.boton((W // 2 - 120, 650, 240, 44), t("volver", "Volver"), lambda: setattr(self, "fase", self.volver_a),
                     tecla=[pygame.K_RETURN, pygame.K_ESCAPE], tam=20)
 

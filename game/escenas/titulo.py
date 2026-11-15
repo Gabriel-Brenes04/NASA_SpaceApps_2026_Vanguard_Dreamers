@@ -29,7 +29,7 @@ class MenuInicial:
                 pygame.draw.ellipse(self.lienzo, (96, 98, 108), (cx - rx, cy - rx // 4, rx * 2, rx // 2))
 
         # encabezado: nombre y subtítulos
-        self._typewriter(t("tit.nombre", "Base Lunar"), "oro", 48, W // 2, 116)
+        self._typewriter(t("tit.nombre", "Mission Survival"), "oro", 48, W // 2, 116)
         self._texto(t("tit.sub", "Simulador de misión para astronautas junior"), "texto", 16, W // 2, 180, centro=True)
         self._texto(t("tit.sub2", "La misión depende de ti... Toma decisiones que importan."), "gris", 12, W // 2, 220, centro=True)
 
@@ -111,7 +111,7 @@ class MenuInicial:
         # dos misiones, una al lado de la otra
         for i, (modo, titulo, detalle, color) in enumerate((
                 ("corta", t("tit.corta", "Demo"), t("tit.corta_d", "14 días · Misión corta"), "panel"),
-                ("completa", t("tit.completa", "Mission Survival"),
+                ("completa", t("tit.completa", "Misión Completa"),
                 t("tit.completa_d", "28 días · Un día lunar entero"), "panel2"))):
             self._boton_doble((W // 2 - 300 + i * 310, y, 290, 84), titulo, detalle,
                             lambda mm=modo: self.nueva_mision(modo=mm), color,
@@ -129,11 +129,11 @@ class MenuInicial:
         self._boton_simple((W - 150, 20, 130, 45), t("tit.salir", "Salir"),
                     self._salir, "panel")
         y += 64
-        # if textos.EN:
-        #     otro = "en" if textos.IDIOMA == "es" else "es"
-        #     self._boton_simple((W // 2 - 190, y, 380, 52),
-        #                     "English" if otro == "en" else "Español",
-        #                     lambda: textos.poner_idioma(otro))
+        if textos.EN:
+            otro = "en" if textos.IDIOMA == "es" else "es"
+            self._boton_simple((W - 150, 75, 130, 45),
+                            "English" if otro == "en" else "Español",
+                            lambda: textos.poner_idioma(otro))
 
 
 
