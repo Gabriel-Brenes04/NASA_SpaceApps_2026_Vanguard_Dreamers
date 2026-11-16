@@ -3,7 +3,7 @@
 Hay dos:
 
 - **A · Recursos del reto** (DONKI, RadLab/OSDR, APOD/NASA Open APIs, CSA). Es lo que el juego presenta como «datos reales»
-- **C · Parámetros de diseño**. Números que el simulador necesita; algunos se inspiran en otras páginas de la NASA.
+- **B · Parámetros de diseño**. Números que el simulador necesita; algunos se inspiran en otras páginas de la NASA.
 
 Fecha de lectura de las páginas: 15/11/2026.
 
@@ -23,7 +23,7 @@ Fecha de lectura de las páginas: 15/11/2026.
 | Vueltas a la Tierra | 16 por día | Ayuda del recreo | [CSA, Relaxing in space](https://www.asc-csa.gc.ca/eng/astronauts/living-in-space/relaxing-in-space.asp) |
 | Cultivo de comida | misiones largas a la Luna | Ayuda de la cosecha | [CSA, Food production on the Moon](https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/) |
 
-## C · Parámetros de diseño · Design parameters
+## b · Parámetros de diseño · Design parameters
 
 | Parámetro | Valor | Referencia que lo inspira |
 |---|---|---|
@@ -54,8 +54,3 @@ The challenge asks to link radiation decisions to real space weather, so every i
 real flare recorded by NASA's Moon to Mars Space Weather Analysis Office, and the shielding decision shows the
 real Sun. The game always says whether that information is **live** or **saved**.
 
-## Química y física (no son «datos de la NASA») · Chemistry and physics
-
-- 2 H₂O → 2 H₂ + O₂: de 36 g de agua salen 32 g de oxígeno (1,125 kg de agua por kg de O₂).
-- La señal de radio viaja a la velocidad de la luz (~300 000 km/s).
-- Derretir hielo y moverse en el rover gastan energía: valores aproximados del juego.
